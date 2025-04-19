@@ -2,31 +2,30 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Umgebungsvariablen
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
 # System-Abhängigkeiten installieren
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        libpq-dev \
-        netcat-traditional \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Python-Abhängigkeiten kopieren und installieren
+# Python-Abhängigkeiten installieren
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Warten auf Datenbank-Script
-COPY wait-for-db.sh .
-RUN chmod +x wait-for-db.sh
+# Anwendungscode kopieren
+COPY . .
 
-# App-Dateien kopieren
-COPY app/ .
+# Start-Skript ausführbar machen
+RUN chmod +x /app/start.sh
 
-# Verzeichnisse für Uploads und Logs erstellen
-RUN mkdir -p uploads logs
-
-# Netzwerk-Port freigeben
+# Port freigeben
 EXPOSE 5000
 
-# Warten auf Datenbank und dann App starten
-CMD ["./wait-for-db.sh", "db", "5432", "python", "run.py"]
+# Startbefehl
+CMD ["/app/start.sh"]

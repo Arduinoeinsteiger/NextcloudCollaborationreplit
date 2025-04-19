@@ -1,42 +1,79 @@
 <?xml version="1.0"?>
-<info>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>swissairdry</id>
     <name>SwissAirDry</name>
-    <summary>SwissAirDry Trocknungsgeräte Verwaltung</summary>
-    <description>
-        <![CDATA[SwissAirDry ist eine umfassende Anwendung für die Verwaltung und Überwachung von Trocknungsgeräten, die Integration der Nextcloud-Umgebung mit der SwissAirDry API.]]>
-    </description>
+    <summary>Trocknungsgeräte und Aufträge verwalten</summary>
+    <description><![CDATA[SwissAirDry ist eine Anwendung zur Verwaltung von Trocknungsgeräten und Aufträgen für Bausanierungsunternehmen.
+
+## Funktionen
+- Überwachung von Trocknungsgeräten in Echtzeit
+- Verwaltung von Aufträgen und Kunden
+- Visualisierung von Energie- und Feuchtigkeitsdaten
+- Integration mit Bexio für Rechnungen
+- QR-Code-basierte Gerätekonfiguration
+
+Diese App ist als Nextcloud-Integration entwickelt und benötigt einen separaten API-Server.]]></description>
+
     <version>2.1.0</version>
-    <licence>AGPL</licence>
-    <author>SwissAirDry Team</author>
+    <licence>agpl</licence>
+    <author mail="info@swissairdry.ch" homepage="https://swissairdry.ch">SwissAirDry Team</author>
     <namespace>SwissAirDry</namespace>
-    <category>integration</category>
-    <website>https://www.swissairdry.ch</website>
-    <bugs>https://github.com/Arduinoeinsteiger/NextcloudCollaborationreplit/issues</bugs>
+    <documentation>
+        <admin>https://docs.swissairdry.ch/admin</admin>
+        <user>https://docs.swissairdry.ch/user</user>
+        <developer>https://docs.swissairdry.ch/developer</developer>
+    </documentation>
+
+    <category>tools</category>
+    <category>monitoring</category>
+    
+    <website>https://swissairdry.ch</website>
+    <bugs>https://github.com/swissairdry/swissairdry/issues</bugs>
+    <repository>https://github.com/swissairdry/swissairdry</repository>
+
     <dependencies>
-        <nextcloud min-version="25" max-version="28"/>
+        <nextcloud min-version="27" max-version="29"/>
     </dependencies>
+
+    <repair-steps>
+        <install>
+            <step>OCA\SwissAirDry\Migration\InstallStep</step>
+        </install>
+        <uninstall>
+            <step>OCA\SwissAirDry\Migration\UninstallStep</step>
+        </uninstall>
+    </repair-steps>
+
+    <background-jobs>
+        <job>OCA\SwissAirDry\Jobs\UpdateDataJob</job>
+    </background-jobs>
+
+    <settings>
+        <admin>OCA\SwissAirDry\Settings\Admin</admin>
+        <admin-section>OCA\SwissAirDry\Settings\AdminSection</admin-section>
+        <personal>OCA\SwissAirDry\Settings\Personal</personal>
+        <personal-section>OCA\SwissAirDry\Settings\PersonalSection</personal-section>
+    </settings>
+
     <navigations>
         <navigation>
             <name>SwissAirDry</name>
             <route>swissairdry.page.index</route>
             <icon>app.svg</icon>
-            <order>10</order>
+            <order>77</order>
         </navigation>
     </navigations>
+
     <external-app>
         <docker-install>
             <registry>ghcr.io</registry>
-            <image>arduinoeinsteiger/swissairdry</image>
-            <image-tag>latest</image-tag>
+            <image>swissairdry/nextcloud-exapp</image>
+            <image-tag>2.1.0</image-tag>
         </docker-install>
-        <routes>
-            <route>
-                <url>.*</url>
-                <verb>GET,POST,PUT,DELETE</verb>
-                <access_level>USER</access_level>
-                <headers_to_exclude>[]</headers_to_exclude>
-            </route>
-        </routes>
+        <scopes>
+            <value>SYSTEM</value>
+            <value>USER</value>
+        </scopes>
     </external-app>
 </info>

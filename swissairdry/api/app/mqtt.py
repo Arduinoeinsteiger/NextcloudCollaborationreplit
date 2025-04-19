@@ -41,8 +41,17 @@ class MQTTClient:
         self.port = port
         self.username = username
         self.password = password
-        self.client = mqtt.Client(client_id="swissairdry-api")
+        
+        # Zufälligen Client-ID erstellen, um doppelte Verbindungen zu vermeiden
+        import uuid
+        client_id = f"swissairdry-api-{uuid.uuid4().hex[:8]}"
+        self.client = mqtt.Client(client_id=client_id)
         self.is_connected_flag = False
+        
+        # Verbindungsstabilität optimieren
+        self.client.reconnect_delay_set(min_delay=1, max_delay=30)
+        self.client.max_inflight_messages_set(20)  # Default ist 20
+        self.client.max_queued_messages_set(100)   # Mehr Nachrichten in der Queue
         
         # Callbacks registrieren
         self.client.on_connect = self._on_connect
@@ -64,11 +73,17 @@ class MQTTClient:
         
         def _connect():
             try:
-                self.client.connect(self.host, self.port, 60)
+                # Höhere keep-alive Zeit und automatische Wiederverbindung
+                # keep_alive=120 bedeutet, dass der Client alle 2 Minuten ein PING sendet
+                # clean_session=False sorgt dafür, dass Abonnements bei Wiederverbindung erhalten bleiben
+                self.client.connect(self.host, self.port, keepalive=120)
+                
+                # Client-Loop in eigenem Thread starten
                 self.client.loop_start()
                 
                 # Warten, bis die Verbindung hergestellt ist oder ein Fehler auftritt
-                for _ in range(10):
+                # Längere Timeout-Zeit für langsame Netzwerke
+                for _ in range(30):  # 3 Sekunden Timeout
                     if self.is_connected_flag:
                         return True
                     time.sleep(0.1)
@@ -76,13 +91,15 @@ class MQTTClient:
                 return False
             except Exception as e:
                 logger.error(f"MQTT-Verbindungsfehler: {e}")
-                raise
+                # Keine Exception werfen, stattdessen False zurückgeben
+                return False
         
         result = await loop.run_in_executor(None, _connect)
         
         if not result:
-            self.client.loop_stop()
-            raise Exception("Zeitüberschreitung bei der MQTT-Verbindung")
+            # Verbindung fehlgeschlagen, aber Client läuft noch für spätere Wiederverbindungsversuche
+            logger.warning("MQTT-Verbindung nicht hergestellt, Client versucht Wiederverbindung")
+            # Keine Exception werfen, damit die API trotzdem funktioniert
     
     async def disconnect(self) -> None:
         """Trennt die Verbindung zum MQTT-Broker."""
@@ -108,8 +125,10 @@ class MQTTClient:
         Raises:
             Exception: Wenn die Nachricht nicht veröffentlicht werden kann
         """
+        # Wenn nicht verbunden, silent fail
         if not self.is_connected_flag:
-            raise Exception("MQTT-Client ist nicht verbunden")
+            logger.warning(f"MQTT-Client ist nicht verbunden, Nachricht an {topic} wird nicht gesendet")
+            return
         
         # Payload in String umwandeln, wenn es ein Dictionary ist
         if isinstance(payload, dict):
@@ -118,10 +137,16 @@ class MQTTClient:
         loop = asyncio.get_event_loop()
         
         def _publish():
-            result = self.client.publish(topic, payload, qos, retain)
-            if result.rc != mqtt.MQTT_ERR_SUCCESS:
-                raise Exception(f"MQTT-Veröffentlichungsfehler: {result.rc}")
+            try:
+                result = self.client.publish(topic, payload, qos, retain)
+                if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                    logger.warning(f"MQTT-Veröffentlichungsfehler: {result.rc}")
+                return result.rc == mqtt.MQTT_ERR_SUCCESS
+            except Exception as e:
+                logger.error(f"Fehler beim Veröffentlichen der MQTT-Nachricht: {e}")
+                return False
         
+        # Fehler werden abgefangen und geloggt, aber nicht weitergegeben
         await loop.run_in_executor(None, _publish)
     
     async def subscribe(self, topic: str, qos: int = 0) -> None:

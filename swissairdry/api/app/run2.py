@@ -1,18 +1,24 @@
 """
-SwissAirDry API Server
+SwissAirDry API Server - Hauptmodul mit korrigierten Imports
 
-Hauptmodul zum Starten des SwissAirDry API-Servers.
+Hauptmodul zum Starten des SwissAirDry API-Servers mit korrigierten Importpfaden.
 
 @author Swiss Air Dry Team <info@swissairdry.com>
 @copyright 2023-2025 Swiss Air Dry Team
 """
 
 import os
+import sys
 import asyncio
 import time
 import logging
 from datetime import datetime
 from typing import Dict, Optional, List, Any, Union
+
+# Füge das aktuelle Verzeichnis zum Python-Pfad hinzu
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, Request, status
@@ -22,10 +28,12 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .database import engine, get_db, Base
-from . import models, schemas, crud
-from .mqtt import MQTTClient
-from .utils import generate_api_key, verify_api_key
+import database
+import models
+import schemas
+import crud
+import mqtt
+import utils
 
 # Logging einrichten
 logging.basicConfig(
@@ -39,7 +47,7 @@ logging.basicConfig(
 logger = logging.getLogger("swissairdry_api")
 
 # Datenbank initialisieren
-Base.metadata.create_all(bind=engine)
+database.Base.metadata.create_all(bind=database.engine)
 
 # FastAPI-App erstellen
 app = FastAPI(
@@ -101,7 +109,7 @@ async def startup_event():
     mqtt_password = os.getenv("MQTT_PASSWORD", "")
     
     try:
-        mqtt_client = MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password)
+        mqtt_client = mqtt.MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password)
         await mqtt_client.connect()
         logger.info(f"MQTT-Client verbunden mit {mqtt_host}:{mqtt_port}")
     except Exception as e:
@@ -197,7 +205,7 @@ async def admin_placeholder():
 async def get_devices(
     skip: int = 0, 
     limit: int = 100, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db)
 ):
     """Gibt eine Liste aller Geräte zurück."""
     devices = crud.get_devices(db, skip=skip, limit=limit)
@@ -207,7 +215,7 @@ async def get_devices(
 @app.post("/api/devices", response_model=schemas.Device)
 async def create_device(
     device: schemas.DeviceCreate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db)
 ):
     """Erstellt ein neues Gerät."""
     db_device = crud.get_device_by_device_id(db, device_id=device.device_id)
@@ -220,7 +228,7 @@ async def create_device(
 
 
 @app.get("/api/devices/{device_id}", response_model=schemas.Device)
-async def get_device(device_id: str, db: Session = Depends(get_db)):
+async def get_device(device_id: str, db: Session = Depends(database.get_db)):
     """Gibt ein Gerät anhand seiner ID zurück."""
     db_device = crud.get_device_by_device_id(db, device_id=device_id)
     if db_device is None:
@@ -232,7 +240,7 @@ async def get_device(device_id: str, db: Session = Depends(get_db)):
 async def update_device(
     device_id: str, 
     device: schemas.DeviceUpdate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db)
 ):
     """Aktualisiert ein Gerät."""
     db_device = crud.get_device_by_device_id(db, device_id=device_id)
@@ -242,7 +250,7 @@ async def update_device(
 
 
 @app.delete("/api/devices/{device_id}", response_model=schemas.Message)
-async def delete_device(device_id: str, db: Session = Depends(get_db)):
+async def delete_device(device_id: str, db: Session = Depends(database.get_db)):
     """Löscht ein Gerät."""
     db_device = crud.get_device_by_device_id(db, device_id=device_id)
     if db_device is None:
@@ -255,7 +263,7 @@ async def delete_device(device_id: str, db: Session = Depends(get_db)):
 async def create_sensor_data(
     device_id: str, 
     data: schemas.SensorDataCreate, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db)
 ):
     """Speichert neue Sensordaten für ein Gerät."""
     db_device = crud.get_device_by_device_id(db, device_id=device_id)
@@ -315,7 +323,7 @@ async def create_sensor_data(
 async def get_sensor_data(
     device_id: str, 
     limit: int = 100, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db)
 ):
     """Gibt die Sensordaten eines Geräts zurück."""
     db_device = crud.get_device_by_device_id(db, device_id=device_id)
@@ -334,7 +342,7 @@ async def get_sensor_data(
 async def send_device_command(
     device_id: str, 
     command: schemas.DeviceCommand, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db)
 ):
     """Sendet einen Befehl an ein Gerät über MQTT."""
     db_device = crud.get_device_by_device_id(db, device_id=device_id)
@@ -378,210 +386,14 @@ async def send_device_command(
         )
 
 
-# --- Kunden-API-Endpunkte ---
+# --- Hauptfunktion ---
 
-@app.get("/api/customers", response_model=List[schemas.Customer])
-async def get_customers(
-    skip: int = 0, 
-    limit: int = 100, 
-    db: Session = Depends(get_db)
-):
-    """Gibt eine Liste aller Kunden zurück."""
-    customers = crud.get_customers(db, skip=skip, limit=limit)
-    return customers
-
-
-@app.post("/api/customers", response_model=schemas.Customer)
-async def create_customer(
-    customer: schemas.CustomerCreate, 
-    db: Session = Depends(get_db)
-):
-    """Erstellt einen neuen Kunden."""
-    return crud.create_customer(db=db, customer=customer)
-
-
-@app.get("/api/customers/{customer_id}", response_model=schemas.Customer)
-async def get_customer(customer_id: int, db: Session = Depends(get_db)):
-    """Gibt einen Kunden anhand seiner ID zurück."""
-    db_customer = crud.get_customer(db, customer_id=customer_id)
-    if db_customer is None:
-        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
-    return db_customer
-
-
-@app.put("/api/customers/{customer_id}", response_model=schemas.Customer)
-async def update_customer(
-    customer_id: int, 
-    customer: schemas.CustomerUpdate, 
-    db: Session = Depends(get_db)
-):
-    """Aktualisiert einen Kunden."""
-    db_customer = crud.get_customer(db, customer_id=customer_id)
-    if db_customer is None:
-        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
-    return crud.update_customer(db=db, customer_id=customer_id, customer=customer)
-
-
-@app.delete("/api/customers/{customer_id}", response_model=schemas.Message)
-async def delete_customer(customer_id: int, db: Session = Depends(get_db)):
-    """Löscht einen Kunden."""
-    db_customer = crud.get_customer(db, customer_id=customer_id)
-    if db_customer is None:
-        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
-    crud.delete_customer(db=db, customer_id=customer_id)
-    return {"message": f"Kunde {customer_id} gelöscht"}
-
-
-@app.get("/api/customers/{customer_id}/devices", response_model=List[schemas.Device])
-async def get_customer_devices(
-    customer_id: int, 
-    db: Session = Depends(get_db)
-):
-    """Gibt alle Geräte eines Kunden zurück."""
-    db_customer = crud.get_customer(db, customer_id=customer_id)
-    if db_customer is None:
-        raise HTTPException(status_code=404, detail="Kunde nicht gefunden")
-    return crud.get_customer_devices(db=db, customer_id=customer_id)
-
-
-# --- Auftrags-API-Endpunkte ---
-
-@app.get("/api/jobs", response_model=List[schemas.Job])
-async def get_jobs(
-    skip: int = 0, 
-    limit: int = 100, 
-    db: Session = Depends(get_db)
-):
-    """Gibt eine Liste aller Aufträge zurück."""
-    jobs = crud.get_jobs(db, skip=skip, limit=limit)
-    return jobs
-
-
-@app.post("/api/jobs", response_model=schemas.Job)
-async def create_job(
-    job: schemas.JobCreate, 
-    db: Session = Depends(get_db)
-):
-    """Erstellt einen neuen Auftrag."""
-    db_customer = crud.get_customer(db, customer_id=job.customer_id)
-    if db_customer is None:
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Kunde mit ID {job.customer_id} nicht gefunden"
-        )
-    return crud.create_job(db=db, job=job)
-
-
-@app.get("/api/jobs/{job_id}", response_model=schemas.Job)
-async def get_job(job_id: int, db: Session = Depends(get_db)):
-    """Gibt einen Auftrag anhand seiner ID zurück."""
-    db_job = crud.get_job(db, job_id=job_id)
-    if db_job is None:
-        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
-    return db_job
-
-
-@app.put("/api/jobs/{job_id}", response_model=schemas.Job)
-async def update_job(
-    job_id: int, 
-    job: schemas.JobUpdate, 
-    db: Session = Depends(get_db)
-):
-    """Aktualisiert einen Auftrag."""
-    db_job = crud.get_job(db, job_id=job_id)
-    if db_job is None:
-        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
-    return crud.update_job(db=db, job_id=job_id, job=job)
-
-
-@app.delete("/api/jobs/{job_id}", response_model=schemas.Message)
-async def delete_job(job_id: int, db: Session = Depends(get_db)):
-    """Löscht einen Auftrag."""
-    db_job = crud.get_job(db, job_id=job_id)
-    if db_job is None:
-        raise HTTPException(status_code=404, detail="Auftrag nicht gefunden")
-    crud.delete_job(db=db, job_id=job_id)
-    return {"message": f"Auftrag {job_id} gelöscht"}
-
-
-# --- Berichts-API-Endpunkte ---
-
-@app.get("/api/reports", response_model=List[schemas.Report])
-async def get_reports(
-    skip: int = 0, 
-    limit: int = 100, 
-    db: Session = Depends(get_db)
-):
-    """Gibt eine Liste aller Berichte zurück."""
-    reports = crud.get_reports(db, skip=skip, limit=limit)
-    return reports
-
-
-@app.post("/api/reports", response_model=schemas.Report)
-async def create_report(
-    report: schemas.ReportCreate, 
-    db: Session = Depends(get_db)
-):
-    """Erstellt einen neuen Bericht."""
-    db_job = crud.get_job(db, job_id=report.job_id)
-    if db_job is None:
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Auftrag mit ID {report.job_id} nicht gefunden"
-        )
-    return crud.create_report(db=db, report=report)
-
-
-@app.get("/api/reports/{report_id}", response_model=schemas.Report)
-async def get_report(report_id: int, db: Session = Depends(get_db)):
-    """Gibt einen Bericht anhand seiner ID zurück."""
-    db_report = crud.get_report(db, report_id=report_id)
-    if db_report is None:
-        raise HTTPException(status_code=404, detail="Bericht nicht gefunden")
-    return db_report
-
-
-# --- Energiekosten-API-Endpunkte ---
-
-@app.get("/api/energy_costs", response_model=List[schemas.EnergyCost])
-async def get_energy_costs(
-    db: Session = Depends(get_db)
-):
-    """Gibt eine Liste aller Energiekosten-Einträge zurück."""
-    energy_costs = crud.get_energy_costs(db)
-    return energy_costs
-
-
-@app.post("/api/energy_costs", response_model=schemas.EnergyCost)
-async def create_energy_cost(
-    energy_cost: schemas.EnergyCostCreate, 
-    db: Session = Depends(get_db)
-):
-    """Erstellt einen neuen Energiekosten-Eintrag."""
-    return crud.create_energy_cost(db=db, energy_cost=energy_cost)
-
-
-@app.get("/api/energy_costs/current", response_model=schemas.EnergyCost)
-async def get_current_energy_cost(db: Session = Depends(get_db)):
-    """Gibt den aktuellen Energiekosten-Eintrag zurück."""
-    current_energy_cost = crud.get_current_energy_cost(db)
-    if current_energy_cost is None:
-        raise HTTPException(
-            status_code=404, 
-            detail="Kein aktueller Energiekosten-Eintrag gefunden"
-        )
-    return current_energy_cost
-
-
-# Hauptfunktion zum Starten des Servers
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    host = os.getenv("HOST", "0.0.0.0")
-    
+    # Server starten
     uvicorn.run(
-        "app.run:app",
-        host=host,
-        port=port,
+        "run2:app",
+        host="0.0.0.0",
+        port=int(os.getenv("API_PORT", "5000")),
         reload=True,
-        log_level="info"
+        reload_dirs=[os.path.dirname(__file__)]
     )

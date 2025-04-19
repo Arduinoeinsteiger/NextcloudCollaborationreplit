@@ -80,8 +80,8 @@ SwissAirDry/
 
 1. Repository klonen:
    ```bash
-   git clone https://github.com/Arduinoeinsteiger/NextcloudCollaborationreplit.git
-   cd NextcloudCollaborationreplit
+   git clone https://github.com/Arduinoeinsteiger/swissairdry-swissairdry.git
+   cd swissairdry-swissairdry
    ```
 
 2. Umgebungsvariablen einrichten:

@@ -1,51 +1,49 @@
 """
-SwissAirDry - Datenbankverbindung
-
-Enthält die Datenbankverbindung und Session für die SwissAirDry API.
+SwissAirDry API - Datenbankverbindung
 
 @author Swiss Air Dry Team <info@swissairdry.com>
 @copyright 2023-2025 Swiss Air Dry Team
 """
 
 import os
-from sqlalchemy import create_engine
+from typing import Dict, Any
+
+import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
 from dotenv import load_dotenv
 
-# Lade Umgebungsvariablen aus .env Datei
+# Umgebungsvariablen laden
 load_dotenv()
 
-# Datenbankverbindung
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Datenbankverbindungs-URL
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./swissairdry.db")
 
-# Für SQLite, falls kein DATABASE_URL definiert ist (nur für Entwicklung)
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./swissairdry.db"
-    engine = create_engine(
-        DATABASE_URL, connect_args={"check_same_thread": False}
+# Engine erstellen
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine = sqlalchemy.create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
 else:
-    # Für PostgreSQL
-    engine = create_engine(
-        DATABASE_URL,
-        pool_size=5,
-        max_overflow=10,
-        pool_recycle=3600,
-        pool_pre_ping=True
+    engine = sqlalchemy.create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
     )
 
-# Session erstellen
+# Sessionmaker erstellen
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Basisklasse für SQLAlchemy-Modelle
+# Basisklasse für Modelle
 Base = declarative_base()
 
 
-# Hilfsfunktion zum Abrufen der Datenbank-Session
+# Hilfsfunktion für Datenbankabfragen
 def get_db():
-    """Liefert eine Datenbank-Session und schließt sie nach Verwendung"""
+    """
+    Datenbankverbindung herstellen und als Generator zurückgeben.
+    Wird für Dependency Injection in FastAPI-Routen verwendet.
+    """
     db = SessionLocal()
     try:
         yield db

@@ -28,8 +28,23 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest build
-        # Installiere Projekt und Abhängigkeiten aus pyproject.toml
-        pip install -e .
+        # Debug-Informationen anzeigen
+        echo "Projektstruktur:"
+        ls -la
+        echo "Python-Version:"
+        python --version
+        echo "pip-Version:"
+        pip --version
+        # Prüfen, ob pyproject.toml vorhanden ist
+        echo "pyproject.toml vorhanden?"
+        test -f pyproject.toml && echo "Ja" || echo "Nein"
+        # pyproject.toml anzeigen, falls vorhanden
+        if [ -f pyproject.toml ]; then
+          echo "Inhalt von pyproject.toml:"
+          cat pyproject.toml
+        fi
+        # Debug: Installiere mit -v für ausführlichere Fehlerausgabe
+        python -m pip install -e . -v
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names

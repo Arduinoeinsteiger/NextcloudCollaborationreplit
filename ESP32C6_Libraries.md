@@ -1,102 +1,76 @@
-# Bibliotheken und Konfiguration für ESP32-C6 mit Farbdisplay
+# ESP32C6 Bibliotheken-Installation
 
-## Benötigte Bibliotheken
+Um den ESP32C6 mit der neuen MQTT-Implementierung korrekt zu kompilieren, müssen folgende Bibliotheken im Arduino IDE installiert werden:
 
-Für das SwissAirDry ESP32-C6 Projekt mit Farbdisplay werden die folgenden Bibliotheken benötigt. Diese können über den Arduino-Bibliotheksmanager installiert werden:
+## Erforderliche Bibliotheken
 
-1. **TFT_eSPI** - Leistungsstarke Bibliothek für TFT-Displays
-   - Version: 2.5.0 oder neuer
-   - Autor: Bodmer
+1. **ESP32 Core** (neueste Version 3.x, mindestens 3.2.0)
+   - Über Arduino-Boardverwalter installieren
+   - Wähle "ESP32-C6" als Board
 
-2. **ArduinoJson** - JSON-Verarbeitung
-   - Version: 6.20.0 oder neuer
-   - Autor: Benoit Blanchon
+2. **ArduinoJson** (neueste Version 7.x)
+   - Über Bibliotheksverwalter installieren
 
-3. **PubSubClient** - MQTT-Client
-   - Version: 2.8.0 oder neuer
-   - Autor: Nick O'Leary
+3. **TFT_eSPI** (neueste Version, mindestens 2.5.43)
+   - Über Bibliotheksverwalter installieren
+   - Konfiguration für 1.47" Display mit ST7789 Treiber anpassen (siehe unten)
 
-4. **QRCode** - QR-Code Generator
-   - Version: 0.0.1 oder neuer
-   - Autor: Richard Moore
+4. **QRCode** von Richard Moore
+   - Über Bibliotheksverwalter installieren (suche nach "qrcode")
 
-5. **Time** - Zeitfunktionen
-   - Version: 1.6.1 oder neuer
-   - Autor: Michael Margolis
+## TFT_eSPI Konfiguration für 1.47" Display (172x320)
 
-## Konfigurationsschritte für das TFT-Display
+Um das 1.47" Display korrekt zu konfigurieren, müssen Sie die `User_Setup.h` in der TFT_eSPI-Bibliothek anpassen:
 
-Die TFT_eSPI-Bibliothek erfordert eine spezifische Konfiguration für Ihr Display. Nach der Installation der Bibliothek müssen Sie die Datei `User_Setup.h` in der TFT_eSPI-Bibliothek bearbeiten.
-
-### 1. Anpassung der Datei User_Setup.h
-
-1. Navigieren Sie zum Arduino-Bibliotheksordner
-2. Öffnen Sie den Ordner `TFT_eSPI`
-3. Öffnen Sie die Datei `User_Setup.h`
-4. Deaktivieren Sie alle vordefinierten Display-Treiber und kommentieren Sie sie aus
-5. Fügen Sie folgende Konfiguration für das 1.47" Display ein:
+1. Navigieren Sie zum Bibliotheksordner (z.B. `Documents/Arduino/libraries/TFT_eSPI`)
+2. Öffnen Sie die Datei `User_Setup.h`
+3. Kommentieren Sie alle vordefinierten Displays aus
+4. Fügen Sie folgende Zeilen hinzu:
 
 ```cpp
-// Für ESP32-C6 mit 1.47-Zoll-Display (172 x 320)
-#define ST7789_DRIVER     // Stellen Sie sicher, dass der richtige Treiber aktiviert ist
-#define TFT_WIDTH  172    // Displaybreite
-#define TFT_HEIGHT 320    // Displayhöhe
-
-// Definieren Sie die GPIO-Pins für das Display
-#define TFT_MISO -1       // Nicht verwendet
-#define TFT_MOSI 7        // SDA Pin
-#define TFT_SCLK 6        // SCL Pin
-#define TFT_CS   9        // CS Pin
-#define TFT_DC   8        // DC Pin
-#define TFT_RST  5        // Reset Pin
-
-#define LOAD_GLCD   // Font 1. Original Adafruit 8 pixel font needs ~1820 bytes in FLASH
-#define LOAD_FONT2  // Font 2. Small 16 pixel high font, needs ~3534 bytes in FLASH, 96 characters
-#define LOAD_FONT4  // Font 4. Medium 26 pixel high font, needs ~5848 bytes in FLASH, 96 characters
-#define LOAD_FONT6  // Font 6. Large 48 pixel font, needs ~2666 bytes in FLASH, only characters 1234567890:-.apm
-#define LOAD_FONT7  // Font 7. 7 segment 48 pixel font, needs ~2438 bytes in FLASH, only characters 1234567890:-.
-#define LOAD_FONT8  // Font 8. Large 75 pixel font needs ~3256 bytes in FLASH, only characters 1234567890:-.
-#define LOAD_GFXFF  // FreeFonts. Include access to the 48 Adafruit_GFX free fonts FF1 to FF48 and custom fonts
-
-#define SMOOTH_FONT
-
-// Farbeinstellungen
-#define SPI_FREQUENCY  27000000   // Standard für ESP32-C6
+// Konfiguration für 1.47" Display (172x320) mit ST7789 Treiber
+#define ST7789_DRIVER
+#define TFT_WIDTH  172
+#define TFT_HEIGHT 320
+#define TFT_RGB_ORDER TFT_BGR  // Farbreihenfolge anpassen (kann je nach Display variieren)
 ```
 
-### 2. SD-Karten-Konfiguration
-
-Wenn Sie die SD-Karte verwenden möchten, stellen Sie sicher, dass Sie den richtigen CS-Pin für die SD-Karte im Sketch konfigurieren:
+4. Definieren Sie die Pins für SPI:
 
 ```cpp
-#define SD_CS_PIN 10  // Ändern Sie dies entsprechend Ihrer Hardware
+// ESP32-C6 XIAO Pins für Display
+#define TFT_MISO -1  // Nicht verwendet
+#define TFT_MOSI 7   // SDA
+#define TFT_SCLK 8   // SCL
+#define TFT_CS   9   // CS
+#define TFT_DC   6   // DC
+#define TFT_RST  5   // RESET
 ```
 
-## Anpassungen für Ihr spezifisches ESP32-C6 Board
+## Wichtiger Hinweis zur MQTT-Bibliothek
 
-Je nach genauem Modell und Pinout Ihres ESP32-C6 Boards mit Farbdisplay müssen Sie möglicherweise weitere Anpassungen vornehmen:
+Die neue Implementierung verwendet die native ESP32-MQTT-Bibliothek (`mqtt_client.h`), die bereits im ESP32-Core enthalten ist. Sie müssen **keine** externe PubSubClient-Bibliothek installieren.
 
-1. **Überprüfen Sie die Pins**: Kontrollieren Sie die GPIO-Nummern für Display, SD-Karte und Relais
-2. **Display-Orientierung**: Passen Sie `tft.setRotation(...)` an (0-3, je nach Ausrichtung)
-3. **Speicherkonfiguration**: Bei Speicherproblemen können Sie nicht benötigte Funktionen auskommentieren
+Diese native MQTT-Implementierung bietet folgende Vorteile:
+- Bessere Leistung und Stabilität
+- Automatische Wiederverbindung
+- SSL/TLS-Unterstützung
+- Geringerer Speicherverbrauch
+- Optimiert für neuere ESP32-Chips wie den ESP32-C6
 
-## QR-Code optimieren
+## Partitionierung
 
-Für eine bessere Lesbarkeit des QR-Codes können Sie den Skalierungsfaktor anpassen:
+Die beigefügte `partitions.csv` bietet ein erweitertes Partitionsschema mit:
+- Mehr Speicher für OTA-Updates (2x 2.5MB)
+- Größerer SPIFFS-Bereich für Daten (ca. 11MB)
 
-```cpp
-#define QR_CODE_SIZE 4  // Erhöhen für größere QR-Codes
-```
+Vergewissern Sie sich, dass diese Partitionsdatei beim Kompilieren verwendet wird. In der Arduino IDE können Sie dies über Werkzeuge > Partitionierungsschema > "Custom Partition" auswählen und den Pfad zur `partitions.csv` angeben.
 
-## Hilfreiche Links
+## Fehlersuche
 
-- [Dokumentation zur TFT_eSPI-Bibliothek](https://github.com/Bodmer/TFT_eSPI)
-- [ESP32-C6 Dokumentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c6/index.html)
-- [Befehlsreferenz für das ST7789-Display](https://github.com/Bodmer/TFT_eSPI/blob/master/TFT_Drivers/ST7789_Rotation.h)
+Sollte die Kompilierung fehlschlagen:
 
-## Troubleshooting
-
-- **Display bleibt leer**: Überprüfen Sie die Pins und die Stromversorgung
-- **SD-Karte wird nicht erkannt**: Überprüfen Sie den CS-Pin und die SPI-Konfiguration
-- **MQTT-Verbindungsprobleme**: Stellen Sie sicher, dass Ihre Netzwerkkonfiguration korrekt ist
-- **Speicherfehler**: Reduzieren Sie die Komplexität (weniger Fonts oder Funktionen)
+1. Überprüfen Sie, ob Sie die richtige Board-Version ausgewählt haben (ESP32-C6)
+2. Stellen Sie sicher, dass alle oben genannten Bibliotheken installiert sind
+3. Überprüfen Sie die TFT_eSPI-Konfiguration
+4. Überprüfen Sie die Partitionstabelle

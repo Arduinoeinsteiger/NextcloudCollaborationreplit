@@ -1,124 +1,166 @@
-# SwissAirDry Installationsanleitung
+# SwissAirDry Installations- und Konfigurationsanleitung
 
-Diese Anleitung beschreibt, wie Sie das SwissAirDry-System auf Ihrem Server installieren.
+Diese Anleitung beschreibt die Installation und Konfiguration des SwissAirDry Stacks, bestehend aus API-Server, MQTT-Broker, Datenbank und Nextcloud-Integration (ExApp).
 
-## Voraussetzungen
+## Systemvoraussetzungen
 
-- Docker und Docker Compose müssen auf dem Server installiert sein
-- Ports 5000, 1883, 8080 und 5432 (optional) müssen freigegeben sein
-- SSH-Zugang zum Server
+- Ubuntu 22.04 LTS oder höher (oder eine andere kompatible Linux-Distribution)
+- Mindestens 2 GB RAM
+- Mindestens 20 GB freier Festplattenspeicher
+- Internetverbindung für die Installation von Paketen und Docker-Images
 
-## Installation
+## Schnelle Installation (Automatisch)
+
+Für eine schnelle und automatische Installation können Sie den folgenden Befehl verwenden:
+
+```bash
+git clone https://github.com/swissairdry/swissairdry.git
+cd swissairdry
+sudo bash install.sh --auto
+```
+
+Diese Methode installiert alle notwendigen Komponenten mit Standardeinstellungen und generiert automatisch sichere Passwörter.
+
+## Manuelle Installation
+
+Wenn Sie die Installation anpassen möchten, folgen Sie diesen Schritten:
 
 ### 1. Repository klonen
 
-Klonen Sie das offizielle Repository:
-
 ```bash
-git clone https://github.com/Arduinoeinsteiger/swissairdry-swissairdry.git
-cd swissairdry-swissairdry
-```
-
-Alternativ können Sie auch die Projektdateien manuell auf Ihren Server übertragen:
-
-```bash
-# Beispiel mit scp (ersetzen Sie user@server mit Ihren Daten)
-scp -r swissairdry_komplettpaket.zip user@server:/pfad/zum/ziel
-unzip swissairdry_komplettpaket.zip
+git clone https://github.com/swissairdry/swissairdry.git
 cd swissairdry
 ```
 
-### 2. Umgebungsvariablen konfigurieren
-
-Kopieren Sie die Beispielkonfiguration und passen Sie sie an:
+### 2. Installationsskript ausführen
 
 ```bash
-cp .env.example .env
+sudo bash install.sh
 ```
 
-Bearbeiten Sie die .env-Datei mit einem Texteditor:
+Folgen Sie den Anweisungen auf dem Bildschirm, um die Domain und andere Einstellungen zu konfigurieren.
+
+### 3. Service-Überprüfung
+
+Nach Abschluss der Installation können Sie die Dienste überprüfen:
+
+- API-Server: http://localhost:5000
+- Simple API: http://localhost:5001
+- MQTT-Broker: localhost:1883
+- Nextcloud ExApp: http://localhost:8000
+
+## Konfiguration der Ports
+
+Die folgenden Ports werden vom SwissAirDry Stack verwendet:
+
+| Port | Dienst                     | Protokoll | Beschreibung                                          |
+|------|----------------------------|-----------|-------------------------------------------------------|
+| 80   | HTTP                       | TCP       | HTTP-Weiterleitungen zu HTTPS                         |
+| 443  | HTTPS                      | TCP       | Verschlüsselte Webzugriffe                            |
+| 1883 | MQTT                       | TCP       | Verbindung für ESP-Geräte und API                     |
+| 5000 | API-Server                 | TCP       | Hauptschnittstelle für Webanwendungen und Mobile Apps |
+| 5001 | Simple API-Server          | TCP       | Vereinfachte API für ESP-Geräte                       |
+| 5432 | PostgreSQL                 | TCP       | Datenbankzugriff                                      |
+| 8000 | Nextcloud ExApp            | TCP       | Nextcloud External App (für Entwicklung)              |
+| 8080 | Nextcloud                  | TCP       | Nextcloud-Webinterface (falls aktiviert)              |
+| 9001 | MQTT Websockets            | TCP       | MQTT über Websockets für Webanwendungen               |
+
+## Konfiguration der DNS-Einträge
+
+Für eine vollständige Installation sollten Sie die folgenden DNS-Einträge konfigurieren:
+
+- `vgnc.org` → Ihre Server-IP
+- `api.vgnc.org` → Ihre Server-IP
+- `mqtt.vgnc.org` → Ihre Server-IP
+
+## SSL-Zertifikate für die Produktion
+
+Für eine Produktionsumgebung empfehlen wir die Verwendung von Let's Encrypt-Zertifikaten:
 
 ```bash
-nano .env
+sudo apt-get install certbot
+sudo certbot certonly --standalone -d vgnc.org -d www.vgnc.org -d api.vgnc.org -d mqtt.vgnc.org
 ```
 
-Passen Sie mindestens die folgenden Werte an:
-- APP_SECRET_KEY (ein zufälliger, sicherer Schlüssel)
-- POSTGRES_PASSWORD (ein sicheres Passwort für die Datenbank)
-- JWT_SECRET_KEY (ein zufälliger, sicherer Schlüssel)
-- PRIMARY_API_HOST=api.vgnc.org
-- BACKUP_API_HOST=swissairdry.replit.app
-- MQTT_PASSWORD (ein sicheres Passwort für den MQTT-Broker)
-
-### 3. MQTT-Passwort einrichten
-
-Erstellen Sie eine Passwortdatei für den MQTT-Broker:
+Kopieren Sie dann die Zertifikate in die entsprechenden Verzeichnisse:
 
 ```bash
-mkdir -p data/mosquitto/{data,log}
-docker run --rm -it eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/mosquitto.passwd swissairdry
+sudo cp /etc/letsencrypt/live/vgnc.org/fullchain.pem ./ssl/certs/vgnc.org.cert.pem
+sudo cp /etc/letsencrypt/live/vgnc.org/privkey.pem ./ssl/private/vgnc.org.key.pem
+sudo chmod 644 ./ssl/certs/vgnc.org.cert.pem
+sudo chmod 600 ./ssl/private/vgnc.org.key.pem
 ```
 
-Geben Sie das Passwort ein (dasselbe wie MQTT_PASSWORD in der .env-Datei).
+## Docker-Container-Management
 
-Kopieren Sie die generierte Passwortdatei:
+### Container neu starten
 
 ```bash
-mkdir -p swissairdry-docker/mosquitto/config
-docker cp <container_id>:/mosquitto/config/mosquitto.passwd swissairdry-docker/mosquitto/config/
+docker compose restart
 ```
 
-### 4. Docker-Compose starten
-
-Starten Sie die Container:
+### Logs anzeigen
 
 ```bash
-docker-compose up -d
+# Alle Logs anzeigen
+docker compose logs
+
+# Logs eines bestimmten Dienstes anzeigen
+docker compose logs api
+docker compose logs mqtt
+docker compose logs db
 ```
 
-Die Container werden gebaut und gestartet. Dies kann einige Minuten dauern.
-
-### 5. Zugriff auf die Anwendung
-
-- API-Server: http://ihre-domain:5000/
-- API-Dokumentation: http://ihre-domain:5000/docs
-- MQTT-Broker: ihre-domain:1883
-- Nextcloud (falls konfiguriert): http://ihre-domain:8080/
-
-## Failover-System
-
-Das Failover-System ist so konfiguriert, dass es automatisch zwischen dem primären Server (api.vgnc.org) und dem Backup-Server (swissairdry.replit.app) wechselt. Der aktive Server wird im Admin-Bereich angezeigt.
-
-Sie können den Status der Server über http://ihre-domain:5000/api-status/ überprüfen. Eine Authentifizierung ist für diesen Endpunkt erforderlich.
-
-## Tipps zur Fehlerbehebung
-
-### Logs einsehen
-
-Die Logs der Container können mit dem folgenden Befehl eingesehen werden:
+### Updates installieren
 
 ```bash
-docker-compose logs -f api
+sudo bash install.sh --update
 ```
 
-Für andere Container den Namen entsprechend ändern (z.B. db, mqtt, nextcloud).
+## ESP-Geräte Konfiguration
 
-### API-Server neu starten
+Die ESP-Firmware ist so konzipiert, dass sie sich automatisch mit dem MQTT-Broker verbindet. Konfigurieren Sie die ESP-Geräte mit dem QR-Code oder über die Webschnittstelle:
 
-Falls der API-Server Probleme verursacht, kann er wie folgt neu gestartet werden:
+1. Verbinden Sie sich mit dem WLAN des ESP-Geräts (normalerweise "SwissAirDry-XXXXX")
+2. Öffnen Sie die Adresse 192.168.4.1 in Ihrem Browser
+3. Konfigurieren Sie die WLAN-Zugangsdaten und den MQTT-Server
+4. Das ESP-Gerät verbindet sich automatisch und sendet Sensordaten an den MQTT-Broker
+
+## Fehlerbehebung
+
+### MQTT-Verbindungsprobleme
+
+Prüfen Sie, ob der MQTT-Broker korrekt läuft:
 
 ```bash
-docker-compose restart api
+docker logs swissairdry-mqtt
 ```
 
-### Datenbank-Verbindung überprüfen
-
-Falls Probleme mit der Datenbank auftreten, können Sie die Verbindung wie folgt überprüfen:
+Überprüfen Sie, ob die Firewall die erforderlichen Ports erlaubt:
 
 ```bash
-docker-compose exec db psql -U swissairdry -d swissairdry -c "SELECT NOW();"
+sudo ufw status
 ```
 
-## Support
+### API-Server-Probleme
 
-Bei Fragen oder Problemen wenden Sie sich bitte an support@swissairdry.com.
+Überprüfen Sie die API-Server-Logs:
+
+```bash
+docker logs swissairdry-api
+```
+
+### Datenbank-Probleme
+
+Überprüfen Sie, ob die Datenbank läuft und erreichbar ist:
+
+```bash
+docker exec -it swissairdry-db psql -U swissairdry -d swissairdry -c "SELECT version();"
+```
+
+## Weitere Informationen
+
+Für weitere Informationen, Updates und Hilfe besuchen Sie:
+- [GitHub Repository](https://github.com/SwissAirDry/swissairdry)
+- [SwissAirDry Dokumentation](https://docs.swissairdry.ch)
+- [Fehlerbehebung](FEHLERBEHEBUNG.md)

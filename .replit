@@ -17,6 +17,10 @@ args = "SwissAirDry Simple API"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
+args = "Ports"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
 args = "MQTT Broker"
 
 [[workflows.workflow]]
@@ -47,7 +51,21 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd swissairdry/api && python start_simple.py"
-waitForPort = 5000
+waitForPort = 5001
+
+[[workflows.workflow]]
+name = "Ports"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cat /etc/services | grep 5000"
 
 [[workflows.workflow]]
 name = "MQTT Broker"
@@ -61,7 +79,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "mkdir -p /tmp/mosquitto && mosquitto -c swissairdry/mqtt/mosquitto.conf"
+args = "mkdir -p /tmp/mosquitto/data /tmp/mosquitto/log && chmod -R 777 /tmp/mosquitto && mosquitto -c swissairdry/mqtt/mosquitto.conf"
 
 [deployment]
 run = ["sh", "-c", "cd docker-base-api/app && python run.py"]
@@ -73,10 +91,15 @@ packages = ["cargo", "freetype", "glibcLocales", "lcms2", "libiconv", "libimageq
 [[ports]]
 localPort = 1883
 externalPort = 3000
+exposeLocalhost = true
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3002
 
 [[ports]]
 localPort = 9001

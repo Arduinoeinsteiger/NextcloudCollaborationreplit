@@ -9,10 +9,10 @@ import os
 import uvicorn
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.getenv("PORT", 5001))  # Verwende einen anderen Port (5001)
     host = os.getenv("HOST", "0.0.0.0")
     
-    print(f"SwissAirDry Simple API Server startet...")
+    print(f"SwissAirDry Simple API Server startet auf Port {port}...")
     
     # Starte den API-Server
     uvicorn.run(

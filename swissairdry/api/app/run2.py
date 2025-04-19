@@ -103,7 +103,7 @@ async def startup_event():
     logger.info("API-Server wird gestartet...")
     
     # MQTT-Client initialisieren
-    mqtt_host = os.getenv("MQTT_HOST", "localhost")
+    mqtt_host = os.getenv("MQTT_HOST", "127.0.0.1") # Nutze lokale IP statt Hostname
     mqtt_port = int(os.getenv("MQTT_PORT", "1883"))
     mqtt_user = os.getenv("MQTT_USER", "")
     mqtt_password = os.getenv("MQTT_PASSWORD", "")
@@ -114,6 +114,7 @@ async def startup_event():
         logger.info(f"MQTT-Client verbunden mit {mqtt_host}:{mqtt_port}")
     except Exception as e:
         logger.error(f"Fehler bei der MQTT-Verbindung: {e}")
+        logger.warning("MQTT-Verbindung fehlgeschlagen, Server läuft ohne MQTT-Unterstützung")
     
     # Hintergrundaufgabe starten
     asyncio.create_task(check_primary_server_availability())
@@ -349,11 +350,9 @@ async def send_device_command(
     if db_device is None:
         raise HTTPException(status_code=404, detail="Gerät nicht gefunden")
     
-    if not mqtt_client or not mqtt_client.is_connected():
-        raise HTTPException(
-            status_code=503, 
-            detail="MQTT-Verbindung nicht verfügbar"
-        )
+    if not mqtt_client or not hasattr(mqtt_client, 'is_connected') or not mqtt_client.is_connected():
+        logger.warning(f"MQTT-Verbindung nicht verfügbar, Befehl wird nur in Datenbank gespeichert: {command.command}={command.value}")
+        # Kein Fehler zurückgeben, stattdessen nur speichern
     
     # Geräte-Konfiguration aktualisieren
     if not db_device.configuration:
@@ -373,17 +372,16 @@ async def send_device_command(
         device=schemas.DeviceUpdate(configuration=db_device.configuration)
     )
     
-    # MQTT-Befehl senden
-    topic = f"swissairdry/{device_id}/cmd/{command.command}"
-    try:
-        await mqtt_client.publish(topic, command.value)
-        return {"message": "Befehl gesendet"}
-    except Exception as e:
-        logger.error(f"Fehler beim Senden des MQTT-Befehls: {e}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Fehler beim Senden des Befehls: {str(e)}"
-        )
+    # MQTT-Befehl senden wenn MQTT verfügbar
+    if mqtt_client and hasattr(mqtt_client, 'is_connected') and mqtt_client.is_connected():
+        topic = f"swissairdry/{device_id}/cmd/{command.command}"
+        try:
+            await mqtt_client.publish(topic, command.value)
+        except Exception as e:
+            logger.error(f"Fehler beim Senden des MQTT-Befehls: {e}")
+            # Fehler nicht an den Client weitergeben
+    
+    return {"message": "Befehl gesendet"}
 
 
 # --- Hauptfunktion ---

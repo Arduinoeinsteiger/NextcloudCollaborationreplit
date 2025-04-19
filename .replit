@@ -91,7 +91,6 @@ packages = ["cargo", "freetype", "glibcLocales", "lcms2", "libiconv", "libimageq
 [[ports]]
 localPort = 1883
 externalPort = 3000
-exposeLocalhost = true
 
 [[ports]]
 localPort = 5000

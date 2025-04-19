@@ -97,7 +97,8 @@ struct Config {
   int relayMode = 0;                     // 0=Manuell, 1=Zeit, 2=Sensor
   int relayOnHour = 8;                   // Einschaltzeit (Stunde)
   int relayOnMinute = 0;                 // Einschaltzeit (Minute)
-  int relayOffHour = 18;                 // Ausschaltzeit (Stunde)
+erst die exapp upgraden mit der neuen doku die du bekommen hasterst die exapp upgraden mit der neuen doku die du bekommen hasterst die exapp upgraden mit der neuen doku die du bekommen hasterst die exapp upgraden mit der neuen doku die du bekommen hastwest die exapp richtig upgraden mit der doku die du bekommen hast
+erst die exapp für die nextcloud upgraden mit der neuen doku  int relayOffHour = 18;                 // Ausschaltzeit (Stunde)
   int relayOffMinute = 0;                // Ausschaltzeit (Minute)
   float relayThreshold = 60.0;           // Schwellenwert für sensorbasierte Steuerung
   

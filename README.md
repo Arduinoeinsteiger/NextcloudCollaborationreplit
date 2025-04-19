@@ -1,55 +1,120 @@
-# SwissAirDry System Projekt in Nextcloud 
-von Valentino Gobetti 
+# SwissAirDry
 
-## Überblick
+Ein umfassendes System zur Verwaltung von Trocknungsgeräten für Bausanierungsunternehmen. Das System bietet Echtzeit-Überwachung von Trocknungsgeräten, Auftragsmanagement, Energiekosten-Berechnung und IoT-Integration mit ESP32C6/ESP8266-Geräten.
 
-SwissAirDry ist eine umfassende Lösung für die Verwaltung von Trocknungsgeräten und Feldservice-Operationen mit IoT-Integration. Das Projekt umfasst eine API-Server-Komponente, eine Weboberfläche, eine Nextcloud-Integration und eine Android-Mobilanwendung.
+## Funktionen
 
-## Aufgeräumte Projektstruktur
+- Echtzeit-Überwachung von Trocknungsgeräten
+- Verwaltung von Aufträgen und Kunden
+- Visualisierung von Energie- und Feuchtigkeitsdaten
+- Integration mit Bexio für Rechnungen
+- QR-Code-basierte Gerätekonfiguration
+- OTA-Updates für ESP32C6 und ESP8266 Geräte
+- IoT-Kommunikation über MQTT
+- Nextcloud-Integration als ExApp (Externe Anwendung)
+- Responsive Web- und Mobile-Oberfläche
 
-Das Projekt wurde in eine aufgeräumte, modulare Struktur reorganisiert:
+## Systemarchitektur
 
-```
-swissairdry/
-├── api/                # FastAPI Backend-Server
-├── app/                # Web-Frontend 
-├── nextcloud/          # Nextcloud-Integration
-├── mobile/             # Android-App
-├── docs/               # Dokumentation
-├── docker-compose.yml  # Docker-Konfiguration
-└── .env.example        # Beispiel-Umgebungsvariablen
-```
+Das SwissAirDry-System besteht aus folgenden Komponenten:
 
-## Schnellstart
+1. **API-Server**: FastAPI-basierter Backend-Server
+2. **Datenbank**: PostgreSQL für persistente Datenspeicherung
+3. **MQTT-Broker**: Für IoT-Kommunikation mit ESP-Geräten
+4. **Nextcloud-Integration**: ExApp für Nextcloud
+5. **Nginx**: Reverse Proxy für HTTPS und Routing
+6. **ESP-Firmware**: Angepasste Firmware für ESP32C6/ESP8266-Geräte
 
-1. Ins Projektverzeichnis wechseln:
+## Installation
+
+### Voraussetzungen
+
+- Docker und Docker Compose
+- SSL-Zertifikate (optional, für Produktionsumgebung empfohlen)
+- Domain mit DNS-Konfiguration (für Produktionsumgebung)
+
+### Schnellinstallation
+
+1. Repository klonen:
    ```
+   git clone https://github.com/swissairdry/swissairdry.git
    cd swissairdry
    ```
 
-2. Umgebungsvariablen konfigurieren:
+2. Installation ausführen:
    ```
-   cp .env.example .env
-   # .env-Datei nach Bedarf anpassen
+   chmod +x install.sh
+   ./install.sh
    ```
 
-3. Docker-Container starten:
+3. Konfigurieren Sie die `.env`-Datei mit Ihren Einstellungen
+
+4. System starten:
    ```
    docker-compose up -d
    ```
 
-4. Die Anwendung ist nun verfügbar unter:
-   - API: http://localhost:5000
-   - Nextcloud App: http://localhost:8080
+### Manuelle Installation
 
-## Dokumentation
+1. Verzeichnisstruktur erstellen:
+   ```
+   chmod +x mkdir.sh
+   ./mkdir.sh
+   ```
 
-Weitere Details finden Sie in der Dokumentation:
+2. SSL-Zertifikate in `ssl/certs/` und `ssl/private/` ablegen
 
-- [Projektübersicht](swissairdry/docs/PROJEKT_UEBERSICHT.md)
-- [Installationsanleitung](swissairdry/docs/INSTALLATION_ANLEITUNG.md)
-- [Fehlerbehebung](swissairdry/docs/FEHLERBEHEBUNG.md)
+3. `.env`-Datei aus `.env.example` erstellen und anpassen
 
-## Hinweis
+4. System starten:
+   ```
+   docker-compose up -d
+   ```
 
-Dies ist die aufgeräumte Version des SwissAirDry-Projekts. Die ursprünglichen Ordner sind weiterhin vorhanden, werden aber nicht mehr aktiv verwendet.
+## ESP-Firmware
+
+Die aktuelle ESP-Firmware unterstützt folgende Geräte:
+
+- ESP32C6 (empfohlen für neue Installationen)
+- ESP8266 (Wemos D1 Mini, für bestehende Installationen)
+
+### ESP32C6-Firmware installieren
+
+1. Arduino IDE öffnen
+2. ESP32C6-Board-Support installieren
+3. Benötigte Bibliotheken installieren
+4. `SwissAirDry_ESP32C6_MQTT.ino` öffnen und hochladen
+
+## Wartung und Update
+
+- System aktualisieren:
+  ```
+  docker-compose pull
+  docker-compose up -d
+  ```
+
+- Logs anzeigen:
+  ```
+  docker-compose logs -f
+  ```
+
+- System neustarten:
+  ```
+  docker-compose restart
+  ```
+
+- System stoppen:
+  ```
+  docker-compose down
+  ```
+
+## Kontakt
+
+Bei Fragen oder Problemen wenden Sie sich an:
+
+- E-Mail: info@vgnc.org
+- Website: https://vgnc.org
+
+## Lizenz
+
+Copyright © 2025 SwissAirDry - Alle Rechte vorbehalten

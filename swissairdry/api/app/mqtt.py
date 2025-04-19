@@ -160,16 +160,25 @@ class MQTTClient:
         Raises:
             Exception: Wenn das Abonnement fehlschlägt
         """
+        # Wenn nicht verbunden, nur Warnung
         if not self.is_connected_flag:
-            raise Exception("MQTT-Client ist nicht verbunden")
+            logger.warning(f"MQTT-Client ist nicht verbunden, Topic {topic} kann nicht abonniert werden")
+            return
         
         loop = asyncio.get_event_loop()
         
         def _subscribe():
-            result, _ = self.client.subscribe(topic, qos)
-            if result != mqtt.MQTT_ERR_SUCCESS:
-                raise Exception(f"MQTT-Abonnementfehler: {result}")
+            try:
+                result, _ = self.client.subscribe(topic, qos)
+                if result != mqtt.MQTT_ERR_SUCCESS:
+                    logger.warning(f"MQTT-Abonnementfehler: {result}")
+                    return False
+                return True
+            except Exception as e:
+                logger.error(f"Fehler beim Abonnieren des MQTT-Topics {topic}: {e}")
+                return False
         
+        # Fehler werden abgefangen und geloggt, aber nicht weitergegeben
         await loop.run_in_executor(None, _subscribe)
     
     async def unsubscribe(self, topic: str) -> None:
@@ -182,16 +191,25 @@ class MQTTClient:
         Raises:
             Exception: Wenn die Kündigung fehlschlägt
         """
+        # Wenn nicht verbunden, nur Warnung
         if not self.is_connected_flag:
-            raise Exception("MQTT-Client ist nicht verbunden")
+            logger.warning(f"MQTT-Client ist nicht verbunden, Abonnement für {topic} kann nicht gekündigt werden")
+            return
         
         loop = asyncio.get_event_loop()
         
         def _unsubscribe():
-            result, _ = self.client.unsubscribe(topic)
-            if result != mqtt.MQTT_ERR_SUCCESS:
-                raise Exception(f"MQTT-Abonnementkündigungsfehler: {result}")
+            try:
+                result, _ = self.client.unsubscribe(topic)
+                if result != mqtt.MQTT_ERR_SUCCESS:
+                    logger.warning(f"MQTT-Abonnementkündigungsfehler: {result}")
+                    return False
+                return True
+            except Exception as e:
+                logger.error(f"Fehler beim Kündigen des MQTT-Abonnements für {topic}: {e}")
+                return False
         
+        # Fehler werden abgefangen und geloggt, aber nicht weitergegeben
         await loop.run_in_executor(None, _unsubscribe)
     
     def is_connected(self) -> bool:
@@ -230,6 +248,8 @@ class MQTTClient:
         self.is_connected_flag = False
         if rc != 0:
             logger.warning(f"Unerwartete MQTT-Trennung mit Code {rc}")
+            # Bei unerwarteter Trennung versucht der Client automatisch,
+            # sich wieder zu verbinden, da wir reconnect_delay_set verwenden
         else:
             logger.info("MQTT-Verbindung getrennt")
     

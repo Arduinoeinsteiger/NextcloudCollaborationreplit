@@ -1,202 +1,299 @@
-# SwissAirDry Fehlerbehebung
+# SwissAirDry Fehlerbehebungsanleitung
 
-Diese Anleitung hilft Ihnen bei der Behebung häufiger Probleme, die bei der Installation oder dem Betrieb des SwissAirDry-Systems auftreten können.
+Diese Anleitung enthält Lösungsansätze für häufige Probleme bei der Installation und Nutzung des SwissAirDry Stacks.
 
-## Verbindungsprobleme
+## Inhaltsverzeichnis
 
-### API-Server nicht erreichbar
+1. [Allgemeine Docker-Probleme](#allgemeine-docker-probleme)
+2. [MQTT-Probleme](#mqtt-probleme)
+3. [API-Server-Probleme](#api-server-probleme)
+4. [Datenbank-Probleme](#datenbank-probleme)
+5. [Nextcloud-Integration](#nextcloud-integration)
+6. [ESP-Geräte-Verbindungsprobleme](#esp-geräte-verbindungsprobleme)
+7. [SSL-Zertifikat-Probleme](#ssl-zertifikat-probleme)
+8. [Netzwerkprobleme](#netzwerkprobleme)
 
-**Symptom:** Die API ist unter http://ihre-domain:5000/ nicht erreichbar.
+## Allgemeine Docker-Probleme
 
-**Lösungen:**
+### Container starten nicht
 
-1. Prüfen Sie, ob der Port 5000 in Ihrer Firewall freigegeben ist:
+**Problem:** Die Docker-Container starten nicht oder stürzen sofort nach dem Start ab.
+
+**Lösung:**
+1. Überprüfen Sie die Docker-Logs:
    ```bash
-   sudo iptables -L -n | grep 5000
+   docker compose logs
    ```
 
-2. Prüfen Sie, ob der API-Container läuft:
+2. Stellen Sie sicher, dass die erforderlichen Ports nicht bereits belegt sind:
    ```bash
-   docker-compose ps
+   sudo lsof -i :5000
+   sudo lsof -i :1883
    ```
 
-3. Überprüfen Sie die Logs des API-Containers:
+3. Docker-Dienst neu starten:
    ```bash
-   docker-compose logs api
+   sudo systemctl restart docker
    ```
 
-4. Starten Sie den API-Container neu:
+4. Vergewissern Sie sich, dass Sie über ausreichend Festplattenplatz verfügen:
    ```bash
-   docker-compose restart api
+   df -h
    ```
 
-### MQTT-Broker nicht erreichbar
+### Berechtigungsprobleme
 
-**Symptom:** Geräte können keine Verbindung zum MQTT-Broker herstellen.
+**Problem:** Fehler wie "permission denied" in den Docker-Logs.
 
-**Lösungen:**
-
-1. Prüfen Sie, ob Port 1883 freigegeben ist:
+**Lösung:**
+1. Überprüfen Sie die Eigentümerschaft der Volume-Verzeichnisse:
    ```bash
-   sudo iptables -L -n | grep 1883
+   sudo chown -R 1000:1000 ./swissairdry/mqtt
+   sudo chown -R 999:999 ./swissairdry/db
    ```
 
-2. Überprüfen Sie die MQTT-Broker-Logs:
+2. Stellen Sie sicher, dass die SSL-Zertifikatdateien die richtigen Berechtigungen haben:
    ```bash
-   docker-compose logs mqtt
+   sudo chmod 644 ./ssl/certs/vgnc.org.cert.pem
+   sudo chmod 600 ./ssl/private/vgnc.org.key.pem
    ```
 
-3. Prüfen Sie, ob die Passwortdatei korrekt erstellt wurde:
+## MQTT-Probleme
+
+### MQTT-Verbindung fehlgeschlagen
+
+**Problem:** ESP-Geräte oder API-Server können keine Verbindung zum MQTT-Broker herstellen.
+
+**Lösung:**
+1. Überprüfen Sie, ob der MQTT-Broker läuft:
    ```bash
-   ls -la swissairdry-docker/mosquitto/config/mosquitto.passwd
+   docker ps | grep mqtt
    ```
 
-4. Testen Sie die MQTT-Verbindung mit einem Client:
+2. Überprüfen Sie die MQTT-Logs:
    ```bash
-   docker exec -it swissairdry-mqtt mosquitto_sub -h localhost -p 1883 -u swissairdry -P IhrPasswort -t test
+   docker logs swissairdry-mqtt
+   ```
+
+3. Überprüfen Sie die mosquitto.conf auf Fehler:
+   ```bash
+   docker exec -it swissairdry-mqtt cat /mosquitto/config/mosquitto.conf
+   ```
+
+4. Stellen Sie sicher, dass der MQTT-Port (1883) erreichbar ist:
+   ```bash
+   netstat -tuln | grep 1883
+   ```
+
+5. Für anonyme Verbindungen in der Entwicklungsumgebung sollte die mosquitto.conf folgende Zeile enthalten:
+   ```
+   allow_anonymous true
+   ```
+
+### MQTT-Authentifizierung
+
+**Problem:** MQTT meldet Authentifizierungsfehler.
+
+**Lösung:**
+1. Überprüfen Sie die MQTT-Benutzeranmeldedaten in der .env-Datei.
+   
+2. Falls Sie die Authentifizierung aktiviert haben, stellen Sie sicher, dass Sie die Passwortdatei erstellt haben:
+   ```bash
+   docker exec -it swissairdry-mqtt mosquitto_passwd -c /mosquitto/config/mosquitto.passwd <username>
+   ```
+
+3. Achten Sie darauf, dass die Verbindungen der Client-Geräte die richtigen Anmeldeinformationen verwenden.
+
+## API-Server-Probleme
+
+### API-Server startet nicht
+
+**Problem:** Der API-Server startet nicht oder bricht mit Fehlern ab.
+
+**Lösung:**
+1. Überprüfen Sie die API-Server-Logs:
+   ```bash
+   docker logs swissairdry-api
+   ```
+
+2. Testen Sie, ob die Datenbank erreichbar ist:
+   ```bash
+   docker exec -it swissairdry-api ping db
+   ```
+
+3. Überprüfen Sie die Umgebungsvariablen:
+   ```bash
+   docker exec -it swissairdry-api env | grep DATABASE_URL
+   ```
+
+4. Starten Sie den Container mit aktiviertem Debug-Modus:
+   ```bash
+   # .env-Datei bearbeiten
+   DEBUG=True
+   # Container neu starten
+   docker compose restart api
    ```
 
 ## Datenbank-Probleme
 
-### Verbindung zur Datenbank fehlgeschlagen
+### Datenbank-Verbindungsfehler
 
-**Symptom:** Die API kann keine Verbindung zur Datenbank herstellen.
+**Problem:** Die Anwendung zeigt Datenbank-Verbindungsfehler an.
 
-**Lösungen:**
-
-1. Prüfen Sie, ob der Datenbank-Container läuft:
+**Lösung:**
+1. Überprüfen Sie, ob der Datenbankcontainer läuft:
    ```bash
-   docker-compose ps db
+   docker ps | grep db
    ```
 
-2. Prüfen Sie die Datenbank-Logs:
+2. Überprüfen Sie die Datenbankverbindungszeichenfolge in der .env-Datei.
+
+3. Stellen Sie sicher, dass die Datenbank initialisiert wurde:
    ```bash
-   docker-compose logs db
+   docker logs swissairdry-db
    ```
 
-3. Prüfen Sie die Verbindungsparameter in der .env-Datei:
+4. Testen Sie die Datenbankverbindung direkt:
    ```bash
-   grep POSTGRES .env
+   docker exec -it swissairdry-db psql -U swissairdry -d swissairdry -c "SELECT 1;"
    ```
 
-4. Stellen Sie eine direkte Verbindung zur Datenbank her, um zu prüfen, ob sie funktioniert:
+### Datenbank-Migrationen
+
+**Problem:** Schemasynchronisation oder Migrationsfehler.
+
+**Lösung:**
+1. Führen Sie die Migrations-Skripte im API-Container aus:
    ```bash
-   docker-compose exec db psql -U swissairdry -d swissairdry -c "SELECT 1;"
+   docker exec -it swissairdry-api python -m swissairdry.db.migrate
    ```
 
-### Datenbankmigration fehlgeschlagen
-
-**Symptom:** Fehler bei der automatischen Migration der Datenbank.
-
-**Lösungen:**
-
-1. Prüfen Sie die API-Logs auf spezifische Migrationsfehler:
+2. Bei schwerwiegenden Problemen können Sie die Datenbank zurücksetzen (ACHTUNG: Datenverlust!):
    ```bash
-   docker-compose logs api | grep -i migrat
+   docker compose down
+   sudo rm -rf ./postgres-data
+   docker compose up -d
    ```
 
-2. Starten Sie die Container neu, um die Migration erneut zu versuchen:
+## Nextcloud-Integration
+
+### Nextcloud ExApp-Verbindungsfehler
+
+**Problem:** Die Nextcloud ExApp kann nicht mit der API kommunizieren.
+
+**Lösung:**
+1. Überprüfen Sie die ExApp-Logs:
    ```bash
-   docker-compose down
-   docker-compose up -d
+   docker logs swissairdry-exapp
    ```
 
-## Failover-System-Probleme
-
-### Automatischer Wechsel funktioniert nicht
-
-**Symptom:** Das System wechselt nicht automatisch zum Backup-Server, wenn der primäre Server ausfällt.
-
-**Lösungen:**
-
-1. Prüfen Sie die aktuellen Server-Einstellungen:
-   ```bash
-   curl -u benutzer:passwort http://ihre-domain:5000/api/v1/api-status
+2. Stellen Sie sicher, dass die API-URL in der .env-Datei korrekt ist:
+   ```
+   API_URL=http://api:5000
    ```
 
-2. Prüfen Sie die API-Logs auf Failover-Meldungen:
+3. Überprüfen Sie die Netzwerkverbindung zwischen den Containern:
    ```bash
-   docker-compose logs api | grep -i server
+   docker exec -it swissairdry-exapp ping api
    ```
 
-3. Führen Sie einen manuellen Wechsel durch:
+## ESP-Geräte-Verbindungsprobleme
+
+### ESP-Gerät verbindet sich nicht mit dem MQTT-Broker
+
+**Problem:** ESP-Geräte können keine Verbindung zum MQTT-Broker herstellen.
+
+**Lösung:**
+1. Prüfen Sie, ob die richtige MQTT-Server-Adresse in der ESP-Konfiguration angegeben ist.
+
+2. Stellen Sie sicher, dass das ESP-Gerät WLAN-Verbindung hat.
+
+3. Überprüfen Sie, ob Sie eine statische IP im lokalen Netzwerk mit korrektem Gateway-Zugang verwenden.
+
+4. Aktivieren Sie Debug-Ausgaben in der ESP-Firmware, falls möglich.
+
+5. Überprüfen Sie, ob der MQTT-Broker anonyme Verbindungen zulässt (für einfache Setups).
+
+### ESP-Gerät aktualisiert keine Sensordaten
+
+**Problem:** ESP-Geräte verbinden sich, senden aber keine Daten.
+
+**Lösung:**
+1. Überprüfen Sie, ob die Topic-Konfiguration korrekt ist.
+
+2. Stellen Sie sicher, dass die Sensoren korrekt angeschlossen sind.
+
+3. Überwachen Sie die MQTT-Themen mit einem MQTT-Client:
    ```bash
-   curl -X POST -u benutzer:passwort http://ihre-domain:5000/api/v1/api-status/switch-to-backup
+   docker exec -it swissairdry-mqtt mosquitto_sub -t 'swissairdry/#' -v
    ```
 
-4. Überprüfen Sie die Umgebungsvariablen in der .env-Datei:
+## SSL-Zertifikat-Probleme
+
+### Nginx meldet Zertifikatsfehler
+
+**Problem:** Nginx startet nicht oder meldet Fehler bezüglich SSL-Zertifikaten.
+
+**Lösung:**
+1. Überprüfen Sie, ob die Zertifikatsdateien vorhanden sind:
    ```bash
-   grep API_ .env
+   ls -la ./ssl/certs/
+   ls -la ./ssl/private/
    ```
 
-## Nextcloud-Probleme
-
-### Nextcloud-App wird nicht angezeigt
-
-**Symptom:** Die SwissAirDry-App erscheint nicht in Nextcloud.
-
-**Lösungen:**
-
-1. Prüfen Sie, ob Nextcloud richtig läuft:
+2. Stellen Sie sicher, dass die Zertifikatsdateien die richtigen Berechtigungen haben:
    ```bash
-   docker-compose ps nextcloud
+   sudo chmod 644 ./ssl/certs/vgnc.org.cert.pem
+   sudo chmod 600 ./ssl/private/vgnc.org.key.pem
    ```
 
-2. Überprüfen Sie, ob das App-Verzeichnis korrekt eingebunden wurde:
+3. Überprüfen Sie die Gültigkeit des Zertifikats:
    ```bash
-   docker exec -it swissairdry-nextcloud ls -la /var/www/html/custom_apps
+   openssl x509 -in ./ssl/certs/vgnc.org.cert.pem -text -noout
    ```
 
-3. Aktivieren Sie die App manuell in Nextcloud:
+## Netzwerkprobleme
+
+### Ports sind nicht erreichbar
+
+**Problem:** Dienste sind innerhalb des Docker-Netzwerks erreichbar, aber nicht von außen.
+
+**Lösung:**
+1. Überprüfen Sie, ob die Ports in der docker-compose.yml korrekt abgebildet werden.
+
+2. Überprüfen Sie die Firewall-Einstellungen:
    ```bash
-   docker exec -it swissairdry-nextcloud php occ app:enable swissairdry
+   sudo ufw status
    ```
 
-4. Prüfen Sie die Nextcloud-Logs:
+3. Stellen Sie sicher, dass der Server die Ports nach außen freigibt:
    ```bash
-   docker-compose logs nextcloud
+   # Ports öffnen
+   sudo ufw allow 80/tcp
+   sudo ufw allow 443/tcp
+   sudo ufw allow 1883/tcp
+   sudo ufw allow 5000/tcp
+   sudo ufw allow 5001/tcp
    ```
 
-## Container-Management
+### Interne Container-Netzwerkprobleme
 
-### Container neu starten
+**Problem:** Container können nicht miteinander kommunizieren.
 
-Um alle Container neu zu starten:
+**Lösung:**
+1. Überprüfen Sie, ob alle Container im selben Netzwerk sind:
+   ```bash
+   docker network inspect swissairdry-net
+   ```
 
-```bash
-docker-compose down
-docker-compose up -d
-```
+2. Testen Sie die Kommunikation zwischen den Containern:
+   ```bash
+   docker exec -it swissairdry-api ping mqtt
+   docker exec -it swissairdry-api ping db
+   ```
 
-Um einen spezifischen Container neu zu starten:
+3. Stellen Sie sicher, dass die Container-Namen in den Verbindungszeichenfolgen verwendet werden und nicht "localhost".
 
-```bash
-docker-compose restart [container-name]
-```
+---
 
-### Container-Logs anzeigen
-
-Um die Logs eines Containers anzuzeigen:
-
-```bash
-docker-compose logs [container-name]
-```
-
-Um die letzten 100 Zeilen der Logs anzuzeigen und fortzufahren:
-
-```bash
-docker-compose logs -f --tail=100 [container-name]
-```
-
-## Support
-
-Wenn Sie ein Problem nicht selbst lösen können, wenden Sie sich bitte an den Support:
-
-- E-Mail: support@swissairdry.com
-- Telefon: +41 XXXX XXXX XX
-
-Bitte halten Sie folgende Informationen bereit:
-- Die Version des SwissAirDry-Systems
-- Relevante Logfiles
-- Eine genaue Beschreibung des Problems
-- Schritte zur Reproduktion des Fehlers, falls möglich
+Wenn Sie weiterhin Probleme haben, überprüfen Sie bitte die [GitHub Issues](https://github.com/SwissAirDry/swissairdry/issues) für bekannte Probleme oder erstellen Sie ein neues Issue mit einer detaillierten Beschreibung Ihres Problems.

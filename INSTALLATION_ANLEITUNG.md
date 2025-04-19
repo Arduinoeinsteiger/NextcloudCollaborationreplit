@@ -10,18 +10,20 @@ Diese Anleitung beschreibt, wie Sie das SwissAirDry-System auf Ihrem Server inst
 
 ## Installation
 
-### 1. Dateien auf den Server übertragen
+### 1. Repository klonen
 
-Laden Sie alle Projektdateien auf Ihren Server hoch:
+Klonen Sie das offizielle Repository:
+
+```bash
+git clone https://github.com/Arduinoeinsteiger/swissairdry-swissairdry.git
+cd swissairdry-swissairdry
+```
+
+Alternativ können Sie auch die Projektdateien manuell auf Ihren Server übertragen:
 
 ```bash
 # Beispiel mit scp (ersetzen Sie user@server mit Ihren Daten)
 scp -r swissairdry_komplettpaket.zip user@server:/pfad/zum/ziel
-```
-
-Entpacken Sie das Archiv:
-
-```bash
 unzip swissairdry_komplettpaket.zip
 cd swissairdry
 ```

@@ -19,8 +19,8 @@ This document provides detailed instructions for installing and configuring the 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/swissairdry/swissairdry.git
-cd swissairdry
+git clone https://github.com/Arduinoeinsteiger/swissairdry-swissairdry.git
+cd swissairdry-swissairdry
 ```
 
 ### 2. Configure Environment Variables

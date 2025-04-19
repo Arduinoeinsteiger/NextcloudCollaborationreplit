@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<info>
+    <id>swissairdry</id>
+    <name>SwissAirDry</name>
+    <summary>SwissAirDry Trocknungsgeräte Verwaltung</summary>
+    <description>
+        <![CDATA[SwissAirDry ist eine umfassende Anwendung für die Verwaltung und Überwachung von Trocknungsgeräten, die Integration der Nextcloud-Umgebung mit der SwissAirDry API.]]>
+    </description>
+    <version>2.0.0</version>
+    <licence>AGPL</licence>
+    <author>SwissAirDry Team</author>
+    <namespace>SwissAirDry</namespace>
+    <category>integration</category>
+    <website>https://www.swissairdry.ch</website>
+    <bugs>https://github.com/Arduinoeinsteiger/NextcloudCollaborationreplit/issues</bugs>
+    <dependencies>
+        <nextcloud min-version="25" max-version="28"/>
+    </dependencies>
+    <navigations>
+        <navigation>
+            <name>SwissAirDry</name>
+            <route>swissairdry.page.index</route>
+            <icon>app.svg</icon>
+            <order>10</order>
+        </navigation>
+    </navigations>
+    <external-app>
+        <load-parallel/>
+        <iframe id="frame" src="https://swissairdry.ch/api/nextcloud?origin={{origin}}&amp;url={{url}}"/>
+        <iframe-selector>@import @nextcloud/dialogs;</iframe-selector>
+    </external-app>
+</info>

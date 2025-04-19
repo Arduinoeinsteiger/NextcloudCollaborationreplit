@@ -17,6 +17,10 @@
 #include <EEPROM.h>                // Konfigurationsspeicherung
 #include <DNSServer.h>             // Captive Portal
 #include <WiFiManager.h>           // WiFi-Konfiguration
+#include <OneButton.h>             // Für Membranschalter
+#include <SPI.h>                   // SPI für SD-Karte
+#include <SD.h>                    // SD-Karten-Unterstützung
+#include <FS.h>                    // Dateisystem
 
 // Optional: Display-Unterstützung (auskommentieren, wenn nicht verwendet)
 //#include <Wire.h>
@@ -37,12 +41,24 @@
 #define RELAY2_PIN D2    // Relais 2
 #define SENSOR_PIN D4    // DHT Sensor
 #define LED_PIN LED_BUILTIN // Eingebaute LED
+#define SD_CS_PIN D8     // SD-Karten-CS-Pin (D8 = GPIO15)
+
+// Membranschalter-Konfiguration (3-Tasten-Modul mit 4 Pins)
+#define MEMBRANE_PIN A0   // Analoger Pin für Membranschalter
+#define BTN_UP 0          // Nach oben (>)
+#define BTN_DOWN 1        // Nach unten (<)
+#define BTN_OK 2          // OK-Taste
 
 // Optional: OLED-Display (auskommentieren, wenn nicht verwendet)
 //#define OLED_RESET -1
 //#define SCREEN_WIDTH 128
 //#define SCREEN_HEIGHT 64
 //Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+// OneButton-Objekte für die 3 Tasten des Membranschalters
+OneButton btnUp(MEMBRANE_PIN, true);
+OneButton btnDown(MEMBRANE_PIN, true);
+OneButton btnOk(MEMBRANE_PIN, true);
 
 // Globale Variablen
 struct Config {
@@ -93,6 +109,121 @@ void handleRestart();
 void handleStatus();
 void generateDeviceId();
 
+// Funktionen für Membranschalter
+void setupButtons();
+void checkMembraneButtons();
+int getMembraneButtonPressed();
+void onUpPressed();
+void onDownPressed();
+void onOkPressed();
+void onUpLongPressed();
+void onDownLongPressed();
+void onOkLongPressed();
+
+// Implementierung der Membranschalter-Funktionen
+void setupButtons() {
+  Serial.println("Membranschalter-Tasten einrichten...");
+  
+  // Konfiguriere die Funktionen für jede Taste
+  btnUp.attachClick(onUpPressed);
+  btnUp.attachLongPressStart(onUpLongPressed);
+  
+  btnDown.attachClick(onDownPressed);
+  btnDown.attachLongPressStart(onDownLongPressed);
+  
+  btnOk.attachClick(onOkPressed);
+  btnOk.attachLongPressStart(onOkLongPressed);
+  
+  Serial.println("Membranschalter-Tasten eingerichtet");
+}
+
+// Prüft, welche Taste gedrückt wurde anhand des Analogwerts
+int getMembraneButtonPressed() {
+  int value = analogRead(MEMBRANE_PIN);
+  
+  // Diese Werte müssen je nach Hardware angepasst werden
+  // Typische Werte für ein 3-Tasten-Modul:
+  if (value < 100) {  // Entspricht ca. 0-0.2V
+    return BTN_UP;    // UP/Rechts-Taste
+  } 
+  else if (value < 300) {  // Entspricht ca. 0.2-0.6V
+    return BTN_DOWN;  // DOWN/Links-Taste
+  } 
+  else if (value < 500) {  // Entspricht ca. 0.6-1.0V
+    return BTN_OK;    // OK-Taste
+  }
+  
+  return -1;  // Keine Taste gedrückt
+}
+
+// Regelmäßig die Membrantasten prüfen
+void checkMembraneButtons() {
+  // Aktuelle Taste ermitteln
+  int button = getMembraneButtonPressed();
+  
+  // OneButton-Bibliothek für die entsprechende Taste aktualisieren
+  if (button == BTN_UP) {
+    btnUp.tick();
+  } 
+  else if (button == BTN_DOWN) {
+    btnDown.tick();
+  } 
+  else if (button == BTN_OK) {
+    btnOk.tick();
+  }
+}
+
+// Aktionen für Tastendrücke
+void onUpPressed() {
+  Serial.println("UP-Taste gedrückt");
+  // Hier die Aktion für die UP-Taste (>) implementieren
+  // z.B. Menünavigation nach rechts oder Wert erhöhen
+}
+
+void onDownPressed() {
+  Serial.println("DOWN-Taste gedrückt");
+  // Hier die Aktion für die DOWN-Taste (<) implementieren
+  // z.B. Menünavigation nach links oder Wert verringern
+}
+
+void onOkPressed() {
+  Serial.println("OK-Taste gedrückt");
+  // Hier die Aktion für die OK-Taste implementieren
+  // z.B. Menüpunkt auswählen oder Einstellung bestätigen
+  
+  // Beispiel: Relais 1 umschalten
+  relay1State = !relay1State;
+  digitalWrite(RELAY1_PIN, relay1State ? HIGH : LOW);
+  Serial.print("Relais 1 manuell auf ");
+  Serial.println(relay1State ? "EIN" : "AUS");
+}
+
+// Aktionen für langes Drücken
+void onUpLongPressed() {
+  Serial.println("UP-Taste lange gedrückt");
+  // Hier die Aktion für langes Drücken der UP-Taste implementieren
+  // z.B. schnelles Erhöhen eines Wertes
+}
+
+void onDownLongPressed() {
+  Serial.println("DOWN-Taste lange gedrückt");
+  // Hier die Aktion für langes Drücken der DOWN-Taste implementieren
+  // z.B. schnelles Verringern eines Wertes
+}
+
+void onOkLongPressed() {
+  Serial.println("OK-Taste lange gedrückt");
+  // Hier die Aktion für langes Drücken der OK-Taste implementieren
+  // z.B. Reset oder Speichern von Einstellungen
+  
+  // Beispiel: Beide Relais ausschalten
+  relay1State = false;
+  relay2State = false;
+  digitalWrite(RELAY1_PIN, LOW);
+  digitalWrite(RELAY2_PIN, LOW);
+  Serial.println("Alle Relais ausgeschaltet");
+}
+
 void setup() {
   // Serielle Schnittstelle initialisieren
   Serial.begin(115200);
@@ -127,10 +258,14 @@ void setup() {
   pinMode(RELAY1_PIN, OUTPUT);
   pinMode(RELAY2_PIN, OUTPUT);
   pinMode(LED_PIN, OUTPUT);
+  pinMode(MEMBRANE_PIN, INPUT);
   
   // Relais ausschalten
   digitalWrite(RELAY1_PIN, LOW);
   digitalWrite(RELAY2_PIN, LOW);
+  
+  // Membrantasten einrichten
+  setupButtons();
   
   // Optional: Display initialisieren
   /*
@@ -170,6 +305,9 @@ void loop() {
   
   // OTA-Updates prüfen
   ESP8266OTA.handle();
+  
+  // Membranschalter prüfen
+  checkMembraneButtons();
   
   // Aktuelle Zeit
   unsigned long currentTime = millis();

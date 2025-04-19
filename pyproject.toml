@@ -1,8 +1,8 @@
 [project]
-name = "repl-nix-workspace"
+name = "swissairdry"
 version = "0.1.0"
-description = "Add your description here"
-requires-python = ">=3.11"
+description = "SwissAirDry - Eine Anwendung für die Verwaltung von Trocknungsgeräten und Felddienstoperationen"
+requires-python = ">=3.9"
 dependencies = [
     "aiofiles>=24.1.0",
     "bcrypt>=4.3.0",

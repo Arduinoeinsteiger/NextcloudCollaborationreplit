@@ -31,7 +31,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd swissairdry/api/app && python run.py"
+args = "cd swissairdry/api/app && python run2.py"
 waitForPort = 5000
 
 [[workflows.workflow]]

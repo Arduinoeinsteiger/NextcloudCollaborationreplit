@@ -11,7 +11,7 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-from . import models, schemas
+import models, schemas
 
 
 # --- Geräte-Operationen ---
@@ -33,7 +33,9 @@ def get_devices(db: Session, skip: int = 0, limit: int = 100) -> List[models.Dev
 
 def create_device(db: Session, device: schemas.DeviceCreate) -> models.Device:
     """Erstellt ein neues Gerät."""
+    import uuid
     db_device = models.Device(
+        id=str(uuid.uuid4()),
         device_id=device.device_id,
         name=device.name,
         description=device.description,

@@ -58,7 +58,7 @@ class DeviceUpdate(BaseModel):
 
 class Device(DeviceBase):
     """Schema für ein Gerät mit allen Feldern"""
-    id: int
+    id: str
     api_key: Optional[str] = None
     status: str
     last_seen: Optional[datetime] = None
@@ -66,6 +66,7 @@ class Device(DeviceBase):
     updated_at: Optional[datetime] = None
 
     class Config:
+        from_attributes = True
         orm_mode = True
 
 
@@ -91,9 +92,10 @@ class SensorDataCreate(SensorDataBase):
 class SensorData(SensorDataBase):
     """Schema für Sensordaten mit allen Feldern"""
     id: int
-    device_id: int
+    device_id: str
 
     class Config:
+        from_attributes = True
         orm_mode = True
 
 

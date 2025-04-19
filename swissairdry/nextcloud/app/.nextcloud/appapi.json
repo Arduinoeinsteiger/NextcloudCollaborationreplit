@@ -1,0 +1,6 @@
+{
+  "external-app": {
+    "enabled": true,
+    "hosts": ["localhost", "api.swissairdry.com", "localhost:5000", "api:5000"]
+  }
+}

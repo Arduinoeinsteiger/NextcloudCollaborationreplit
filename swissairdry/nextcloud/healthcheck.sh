@@ -1,4 +1,14 @@
-#!/bin/sh
+#!/bin/bash
+# Healthcheck script für SwissAirDry Nextcloud ExApp
 
-# Prüfen, ob der SwissAirDry-Service auf dem angegebenen Port antwortet
-wget -q --spider http://localhost:$PORT/health && exit 0 || exit 1
+# Überprüfen, ob der Server antwortet
+HEALTH_ENDPOINT="http://localhost:8000/health"
+
+response=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_ENDPOINT)
+
+if [ "$response" = "200" ]; then
+    exit 0
+else
+    echo "Healthcheck failed with status $response"
+    exit 1
+fi

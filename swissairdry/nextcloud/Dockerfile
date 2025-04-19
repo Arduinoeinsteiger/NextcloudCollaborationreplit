@@ -2,25 +2,29 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Kopieren der Anforderungen und Installation der Abhängigkeiten
-COPY requirements.txt /app/
+# Systemabhängigkeiten installieren
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python-Abhängigkeiten installieren
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopieren der App-Dateien
-COPY lib /app/lib/
-COPY templates /app/templates/
-COPY static /app/static/
+# Anwendungsdateien kopieren
+COPY . .
+
+# Healthcheck konfigurieren
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["bash", "healthcheck.sh"]
 
 # Umgebungsvariablen
-ENV PYTHONUNBUFFERED=1 
 ENV PORT=8000
+ENV PYTHONUNBUFFERED=1
 
-# Startskript für Gesundheitscheck
-COPY --chmod=775 healthcheck.sh /
+# Port freigeben
+EXPOSE 8000
 
-# Starten der Anwendung
-WORKDIR /app/lib
-ENTRYPOINT ["python", "main.py"]
-
-# Gesundheitscheck für Container
-HEALTHCHECK --interval=5s --timeout=3s --retries=3 CMD /healthcheck.sh
+# Anwendung starten
+CMD ["python", "lib/main.py"]

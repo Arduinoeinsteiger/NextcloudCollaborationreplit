@@ -1,95 +1,116 @@
-# SwissAirDry Nextcloud External App
+# SwissAirDry Nextcloud ExApp - Installationsanleitung
 
-Diese Anleitung beschreibt die Installation und Konfiguration der SwissAirDry External App für Nextcloud.
+Diese Anleitung beschreibt die Installation der SwissAirDry-App als moderne ExApp (External App) in Nextcloud ab Version 25.
 
 ## Voraussetzungen
 
-- Nextcloud 25 oder höher mit aktivierter AppAPI
-- Docker und Docker Compose auf dem Server
-- PHP 8.0 oder höher mit Mosquitto-Erweiterung
-- Zugriff auf die SwissAirDry-API
+* Nextcloud Server (Version 25 oder höher)
+* Docker auf dem Nextcloud-Server
+* Administrator-Zugriff auf Nextcloud
 
-## Installation
+## 1. Installation über den Nextcloud App Store (empfohlen)
 
-### 1. AppAPI aktivieren
+Die einfachste Methode zur Installation ist über den Nextcloud App Store:
 
-Falls die AppAPI noch nicht aktiviert ist, installieren Sie sie in Nextcloud:
+1. Melden Sie sich als Administrator bei Ihrer Nextcloud-Instanz an
+2. Navigieren Sie zu "Apps" > "App-Verwaltung"
+3. Wählen Sie die Kategorie "Integration" oder suchen Sie nach "SwissAirDry"
+4. Klicken Sie auf "Installieren"
 
-```bash
-sudo -u www-data php /path/to/nextcloud/occ app:install app_api
-sudo -u www-data php /path/to/nextcloud/occ app:enable app_api
-```
+Die App wird automatisch heruntergeladen und eingerichtet, einschließlich des Docker-Containers.
 
-### 2. App registrieren
+## 2. Manuelle Installation
 
-Registrieren Sie die SwissAirDry-App in der AppAPI:
+Wenn Sie die App manuell installieren möchten:
 
-```bash
-sudo -u www-data php /path/to/nextcloud/occ app_api:app:register swissairdry docker \
-    --json-info /path/to/swissairdry-nextcloud/appapi.json \
-    --env "MQTT_BROKER=swissairdry-mqtt" \
-    --env "MQTT_PORT=1883" \
-    --env "API_URL=http://swissairdry-api:5000"
-```
+1. Laden Sie das App-Paket von GitHub herunter:
+   ```bash
+   git clone https://github.com/Arduinoeinsteiger/NextcloudCollaborationreplit
+   ```
 
-Ersetzen Sie die Umgebungsvariablen nach Bedarf mit Ihren tatsächlichen Werten.
+2. Kopieren Sie den `swissairdry`-Ordner in das Nextcloud `apps`-Verzeichnis:
+   ```bash
+   cp -r swissairdry /path/to/nextcloud/apps/
+   ```
 
-### 3. App installieren
+3. Aktivieren Sie die App über die Kommandozeile:
+   ```bash
+   cd /path/to/nextcloud
+   sudo -u www-data php occ app:enable swissairdry
+   ```
 
-Installieren Sie die App über die AppAPI:
+4. Da SwissAirDry eine ExApp ist, wird Nextcloud automatisch versuchen, den entsprechenden Docker-Container herunterzuladen und zu starten.
 
-```bash
-sudo -u www-data php /path/to/nextcloud/occ app_api:app:install swissairdry
-```
+## 3. Docker-Container manuell konfigurieren
 
-### 4. App einrichten
+Wenn der automatische Docker-Setup nicht funktioniert, können Sie den Container manuell einrichten:
 
-Nachdem die App installiert wurde, können Sie sie in der Nextcloud-Oberfläche konfigurieren:
+1. Ziehen Sie das Docker-Image:
+   ```bash
+   docker pull ghcr.io/arduinoeinsteiger/swissairdry:latest
+   ```
 
-1. Melden Sie sich als Administrator an
-2. Gehen Sie zu "Einstellungen" > "SwissAirDry"
-3. Geben Sie die Zugangsdaten für die SwissAirDry-API ein
+2. Registrieren Sie die App als ExApp:
+   ```bash
+   sudo -u www-data php occ app_api:app:register swissairdry \
+     --json-info /path/to/nextcloud/apps/swissairdry/appinfo/info.xml \
+     --docker-image ghcr.io/arduinoeinsteiger/swissairdry:latest
+   ```
 
-## Verbindung mit der API
+## 4. Konfiguration
 
-Die App verbindet sich automatisch mit der SwissAirDry-API. Falls die Verbindung nicht funktioniert, überprüfen Sie folgende Punkte:
+Nach der Installation:
 
-1. Stellen Sie sicher, dass die API-URL korrekt ist
-2. Überprüfen Sie, ob der MQTT-Broker erreichbar ist
-3. Prüfen Sie, ob die Zugangsdaten korrekt sind
+1. Navigieren Sie zu "Einstellungen" > "SwissAirDry"
+2. Konfigurieren Sie die folgenden Einstellungen:
+   - API-Server-URL
+   - MQTT-Broker-Einstellungen
+   - Benutzer-Zugriffsrechte
 
 ## Fehlerbehebung
 
-### App erscheint nicht in Nextcloud
+### Nextcloud stürzt beim Zugriff auf die App ab
 
-Überprüfen Sie, ob die AppAPI korrekt installiert ist:
+Dies deutet auf ein Problem mit der ExApp-Integration hin. Prüfen Sie:
 
-```bash
-sudo -u www-data php /path/to/nextcloud/occ app:list | grep app_api
-```
+1. Die Docker-Installation auf Ihrem Server:
+   ```bash
+   docker ps | grep swissairdry
+   ```
 
-Überprüfen Sie, ob die SwissAirDry-App registriert ist:
+2. Die ExApp-Registrierung in Nextcloud:
+   ```bash
+   sudo -u www-data php occ app_api:app:list
+   ```
 
-```bash
-sudo -u www-data php /path/to/nextcloud/occ app_api:app:list
-```
+3. Kontrollieren Sie die Nextcloud-Logs:
+   ```bash
+   tail -f /path/to/nextcloud/data/nextcloud.log
+   ```
 
-### Verbindungsprobleme mit der API
+### Container startet nicht
 
-Prüfen Sie, ob die API erreichbar ist:
+Wenn der Docker-Container nicht startet:
 
-```bash
-curl -v http://swissairdry-api:5000/api/v1/health
-```
+1. Prüfen Sie den Container-Status:
+   ```bash
+   docker logs swissairdry
+   ```
 
-### MQTT-Verbindungsprobleme
+2. Stellen Sie sicher, dass die Ports nicht blockiert sind
+3. Überprüfen Sie, ob Docker genügend Ressourcen hat
 
-Prüfen Sie, ob der MQTT-Broker läuft:
+## Aktualisierung
 
-```bash
-mosquitto_sub -h swissairdry-mqtt -p 1883 -t test
-```
+Updates werden automatisch über den Nextcloud App Store bereitgestellt. Bei manueller Installation:
 
-## Support
+1. Stoppen Sie den alten Container:
+   ```bash
+   docker stop swissairdry
+   ```
 
-Bei Problemen oder Fragen wenden Sie sich an support@swissairdry.com.
+2. Laden Sie das neue App-Paket herunter und installieren Sie es wie oben beschrieben
+3. Aktualisieren Sie die App in Nextcloud:
+   ```bash
+   sudo -u www-data php occ app:update swissairdry
+   ```

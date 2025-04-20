@@ -97,16 +97,45 @@ configure_cloudflare() {
         return
     fi
     
-    read -sp "Bitte geben Sie Ihren Cloudflare API-Token ein: " cf_token
-    echo ""
-    
-    read -p "Bitte geben Sie Ihre Cloudflare Zone ID ein (zu finden in der Übersicht Ihrer Domain): " cf_zone_id
-    
     # Installiere jq, falls nicht vorhanden
     if ! command -v jq &>/dev/null; then
         print_info "Installiere jq für JSON-Verarbeitung..."
         apt-get update && apt-get install -y jq
     fi
+    
+    # Token und Zone ID abfragen und validieren
+    local token_valid=false
+    local cf_token=""
+    local cf_zone_id=""
+    
+    while [ "$token_valid" = false ]; do
+        read -sp "Bitte geben Sie Ihren Cloudflare API-Token ein: " cf_token
+        echo ""
+        
+        read -p "Bitte geben Sie Ihre Cloudflare Zone ID ein (zu finden in der Übersicht Ihrer Domain): " cf_zone_id
+        
+        print_info "Teste Cloudflare API-Token und Zone ID..."
+        # Teste den Token durch Abfrage der Zone-Details
+        local test_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cf_zone_id" \
+            -H "Authorization: Bearer $cf_token" \
+            -H "Content-Type: application/json")
+        
+        local success=$(echo "$test_response" | jq -r '.success')
+        
+        if [[ "$success" == "true" ]]; then
+            local zone_name=$(echo "$test_response" | jq -r '.result.name')
+            print_success "API-Token und Zone ID sind gültig. Zone: $zone_name"
+            token_valid=true
+        else
+            local error_message=$(echo "$test_response" | jq -r '.errors[0].message')
+            print_error "API-Token oder Zone ID ungültig: $error_message"
+            read -p "Möchten Sie es erneut versuchen? (j/n): " retry
+            if [[ "$retry" != "j" && "$retry" != "J" ]]; then
+                print_info "Cloudflare-Konfiguration übersprungen."
+                return
+            fi
+        fi
+    done
     
     # IP-Adresse ermitteln, falls nicht angegeben
     if [ -z "$ip" ]; then
@@ -117,6 +146,7 @@ configure_cloudflare() {
     
     # Subdomains erstellen
     local subdomains=("" "api" "mqtt" "www")
+    local all_successful=true
     
     for subdomain in "${subdomains[@]}"; do
         local name=$subdomain
@@ -131,27 +161,48 @@ configure_cloudflare() {
             -H "Authorization: Bearer $cf_token" \
             -H "Content-Type: application/json" | jq -r '.result[0].id')
         
+        local update_response=""
         if [ "$record_id" != "null" ] && [ ! -z "$record_id" ]; then
             # Eintrag aktualisieren
-            curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records/$record_id" \
+            update_response=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records/$record_id" \
                 -H "Authorization: Bearer $cf_token" \
                 -H "Content-Type: application/json" \
-                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ip\",\"ttl\":1,\"proxied\":true}" | jq -r '.success'
+                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ip\",\"ttl\":1,\"proxied\":true}")
             
-            print_success "DNS-Eintrag für $name.$domain aktualisiert."
+            local success=$(echo "$update_response" | jq -r '.success')
+            if [[ "$success" == "true" ]]; then
+                print_success "DNS-Eintrag für $name.$domain aktualisiert."
+            else
+                print_error "Fehler beim Aktualisieren des DNS-Eintrags für $name.$domain"
+                local error_message=$(echo "$update_response" | jq -r '.errors[0].message')
+                print_error "Fehlermeldung: $error_message"
+                all_successful=false
+            fi
         else
             # Neuen Eintrag erstellen
-            curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records" \
+            update_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records" \
                 -H "Authorization: Bearer $cf_token" \
                 -H "Content-Type: application/json" \
-                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ip\",\"ttl\":1,\"proxied\":true}" | jq -r '.success'
+                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ip\",\"ttl\":1,\"proxied\":true}")
             
-            print_success "DNS-Eintrag für $name.$domain erstellt."
+            local success=$(echo "$update_response" | jq -r '.success')
+            if [[ "$success" == "true" ]]; then
+                print_success "DNS-Eintrag für $name.$domain erstellt."
+            else
+                print_error "Fehler beim Erstellen des DNS-Eintrags für $name.$domain"
+                local error_message=$(echo "$update_response" | jq -r '.errors[0].message')
+                print_error "Fehlermeldung: $error_message"
+                all_successful=false
+            fi
         fi
     done
     
-    print_success "Cloudflare DNS-Einträge wurden konfiguriert."
-    print_info "Es kann bis zu 5 Minuten dauern, bis die Änderungen wirksam werden."
+    if [[ "$all_successful" == "true" ]]; then
+        print_success "Cloudflare DNS-Einträge wurden erfolgreich konfiguriert."
+        print_info "Es kann bis zu 5 Minuten dauern, bis die Änderungen wirksam werden."
+    else
+        print_warning "Einige DNS-Einträge konnten nicht konfiguriert werden. Bitte überprüfen Sie die Fehler und versuchen Sie es später manuell."
+    fi
 }
 
 # Funktion zum Konfigurieren von Hetzner Cloud
@@ -171,34 +222,89 @@ configure_hetzner() {
         return
     fi
     
-    read -sp "Bitte geben Sie Ihren Hetzner API-Token ein: " hcloud_token
-    echo ""
-    
     # Installiere jq, falls nicht vorhanden
     if ! command -v jq &>/dev/null; then
         print_info "Installiere jq für JSON-Verarbeitung..."
         apt-get update && apt-get install -y jq
     fi
     
-    # Server ID ermitteln
-    print_info "Verfügbare Server:"
-    local servers=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/servers")
-    echo "$servers" | jq -r '.servers[] | .id, .name, "--------"'
+    # Token validieren und Server auflisten
+    local token_valid=false
+    local hcloud_token=""
     
-    read -p "Bitte geben Sie die ID des zu konfigurierenden Servers ein: " server_id
+    while [ "$token_valid" = false ]; do
+        read -sp "Bitte geben Sie Ihren Hetzner API-Token ein: " hcloud_token
+        echo ""
+        
+        print_info "Teste Hetzner API-Token..."
+        # Token-Test durch Abfrage der Server
+        local test_response=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/servers")
+        
+        # Prüfen, ob die Antwort valid ist
+        if echo "$test_response" | jq -e '.servers != null' &>/dev/null; then
+            local server_count=$(echo "$test_response" | jq '.servers | length')
+            print_success "API-Token ist gültig. $server_count Server gefunden."
+            token_valid=true
+            
+            # Server anzeigen
+            print_info "Verfügbare Server:"
+            echo "$test_response" | jq -r '.servers[] | "ID: \(.id), Name: \(.name), Status: \(.status), Typ: \(.server_type.name)"'
+        else
+            local error_message=$(echo "$test_response" | jq -r '.error.message')
+            print_error "API-Token ungültig: $error_message"
+            read -p "Möchten Sie es erneut versuchen? (j/n): " retry
+            if [[ "$retry" != "j" && "$retry" != "J" ]]; then
+                print_info "Hetzner-Konfiguration übersprungen."
+                return
+            fi
+        fi
+    done
     
-    if [ -z "$server_id" ]; then
-        print_error "Keine Server-ID angegeben. Hetzner-Konfiguration wird übersprungen."
-        return
-    fi
+    # Server ID erfragen und validieren
+    local server_valid=false
+    
+    while [ "$server_valid" = false ]; do
+        read -p "Bitte geben Sie die ID des zu konfigurierenden Servers ein: " server_id
+        
+        if [ -z "$server_id" ]; then
+            print_error "Keine Server-ID angegeben. Bitte geben Sie eine gültige ID ein."
+            continue
+        fi
+        
+        # Prüfen, ob Server existiert
+        local server_check=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/servers/$server_id")
+        
+        if echo "$server_check" | jq -e '.server != null' &>/dev/null; then
+            local server_name=$(echo "$server_check" | jq -r '.server.name')
+            print_success "Server mit ID $server_id gefunden: $server_name"
+            server_valid=true
+        else
+            local error_message=$(echo "$server_check" | jq -r '.error.message')
+            print_error "Server-ID ungültig: $error_message"
+            read -p "Möchten Sie es erneut versuchen? (j/n): " retry
+            if [[ "$retry" != "j" && "$retry" != "J" ]]; then
+                print_info "Hetzner-Konfiguration übersprungen."
+                return
+            fi
+        fi
+    done
+    
+    # Aktuelle Ports aus der Umgebung holen
+    HTTP_PORT=${HTTP_PORT:-80}
+    HTTPS_PORT=${HTTPS_PORT:-443}
+    MQTT_PORT=${MQTT_PORT:-1883}
+    MQTT_SSL_PORT=${MQTT_SSL_PORT:-8883}
+    POSTGRES_PORT=${POSTGRES_PORT:-5432}
+    NEXTCLOUD_PORT=${NEXTCLOUD_PORT:-8080}
     
     # Firewall erstellen oder aktualisieren
     print_info "Erstelle/Aktualisiere Firewall-Regeln..."
     
     # Überprüfen, ob bereits eine Firewall mit dem Namen "SwissAirDry" existiert
-    local firewall_id=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/firewalls" | jq -r '.firewalls[] | select(.name=="SwissAirDry") | .id')
+    local firewall_check=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/firewalls")
+    local firewall_id=$(echo "$firewall_check" | jq -r '.firewalls[] | select(.name=="SwissAirDry") | .id')
     
-    # Firewall-Regeln
+    # Dynamische Firewall-Regeln basierend auf konfigurierten Ports
     local rules='{
         "rules": [
             {
@@ -210,44 +316,47 @@ configure_hetzner() {
             {
                 "direction": "in",
                 "protocol": "tcp",
-                "port": "80",
+                "port": "'$HTTP_PORT'",
                 "source_ips": ["0.0.0.0/0", "::/0"]
             },
             {
                 "direction": "in",
                 "protocol": "tcp",
-                "port": "443",
+                "port": "'$HTTPS_PORT'",
                 "source_ips": ["0.0.0.0/0", "::/0"]
             },
             {
                 "direction": "in",
                 "protocol": "tcp",
-                "port": "1883",
+                "port": "'$MQTT_PORT'",
                 "source_ips": ["0.0.0.0/0", "::/0"]
             },
             {
                 "direction": "in",
                 "protocol": "tcp",
-                "port": "8883",
+                "port": "'$MQTT_SSL_PORT'",
                 "source_ips": ["0.0.0.0/0", "::/0"]
             },
             {
                 "direction": "in",
                 "protocol": "tcp",
-                "port": "5432",
+                "port": "'$POSTGRES_PORT'",
                 "source_ips": ["0.0.0.0/0", "::/0"]
             },
             {
                 "direction": "in",
                 "protocol": "tcp",
-                "port": "8080",
+                "port": "'$NEXTCLOUD_PORT'",
                 "source_ips": ["0.0.0.0/0", "::/0"]
             }
         ]
     }'
     
+    local firewall_operation_success=false
+    
     if [ -z "$firewall_id" ]; then
         # Firewall erstellen
+        print_info "Erstelle neue Firewall 'SwissAirDry'..."
         local create_response=$(curl -s -X POST -H "Authorization: Bearer $hcloud_token" -H "Content-Type: application/json" -d "{
             \"name\": \"SwissAirDry\",
             \"apply_to\": {
@@ -258,34 +367,69 @@ configure_hetzner() {
             $rules
         }" "https://api.hetzner.cloud/v1/firewalls")
         
-        firewall_id=$(echo "$create_response" | jq -r '.firewall.id')
-        print_success "Neue Firewall 'SwissAirDry' mit ID $firewall_id erstellt und auf Server angewendet."
+        if echo "$create_response" | jq -e '.firewall != null' &>/dev/null; then
+            firewall_id=$(echo "$create_response" | jq -r '.firewall.id')
+            print_success "Neue Firewall 'SwissAirDry' mit ID $firewall_id erstellt und auf Server angewendet."
+            firewall_operation_success=true
+        else
+            local error_message=$(echo "$create_response" | jq -r '.error.message')
+            print_error "Fehler beim Erstellen der Firewall: $error_message"
+        fi
     else
         # Firewall aktualisieren
-        curl -s -X PUT -H "Authorization: Bearer $hcloud_token" -H "Content-Type: application/json" -d "$rules" "https://api.hetzner.cloud/v1/firewalls/$firewall_id"
+        print_info "Aktualisiere bestehende Firewall 'SwissAirDry' mit ID $firewall_id..."
+        local update_response=$(curl -s -X PUT -H "Authorization: Bearer $hcloud_token" -H "Content-Type: application/json" -d "$rules" "https://api.hetzner.cloud/v1/firewalls/$firewall_id")
         
-        # Server der Firewall zuweisen, falls noch nicht geschehen
-        local assigned=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/firewalls/$firewall_id" | jq -r ".firewall.applied_to[] | select(.server.id==$server_id) | .server.id")
-        
-        if [ -z "$assigned" ]; then
-            curl -s -X POST -H "Authorization: Bearer $hcloud_token" -H "Content-Type: application/json" -d "{
-                \"apply_to\": [
-                    {
-                        \"type\": \"server\",
-                        \"server\": {
-                            \"id\": $server_id
-                        }
-                    }
-                ]
-            }" "https://api.hetzner.cloud/v1/firewalls/$firewall_id/actions/apply_to_resources"
+        if echo "$update_response" | jq -e '.firewall != null' &>/dev/null; then
+            print_success "Firewall-Regeln aktualisiert."
             
-            print_success "Firewall 'SwissAirDry' mit ID $firewall_id auf Server angewendet."
+            # Server der Firewall zuweisen, falls noch nicht geschehen
+            local firewall_details=$(curl -s -H "Authorization: Bearer $hcloud_token" "https://api.hetzner.cloud/v1/firewalls/$firewall_id")
+            local assigned=$(echo "$firewall_details" | jq -r ".firewall.applied_to[] | select(.server.id==$server_id) | .server.id")
+            
+            if [ -z "$assigned" ]; then
+                print_info "Wende Firewall auf Server an..."
+                local apply_response=$(curl -s -X POST -H "Authorization: Bearer $hcloud_token" -H "Content-Type: application/json" -d "{
+                    \"apply_to\": [
+                        {
+                            \"type\": \"server\",
+                            \"server\": {
+                                \"id\": $server_id
+                            }
+                        }
+                    ]
+                }" "https://api.hetzner.cloud/v1/firewalls/$firewall_id/actions/apply_to_resources")
+                
+                if echo "$apply_response" | jq -e '.action != null' &>/dev/null; then
+                    print_success "Firewall 'SwissAirDry' mit ID $firewall_id auf Server angewendet."
+                    firewall_operation_success=true
+                else
+                    local error_message=$(echo "$apply_response" | jq -r '.error.message')
+                    print_error "Fehler beim Anwenden der Firewall auf den Server: $error_message"
+                fi
+            else
+                print_success "Firewall 'SwissAirDry' mit ID $firewall_id ist bereits auf Server angewendet."
+                firewall_operation_success=true
+            fi
         else
-            print_success "Firewall 'SwissAirDry' mit ID $firewall_id aktualisiert."
+            local error_message=$(echo "$update_response" | jq -r '.error.message')
+            print_error "Fehler beim Aktualisieren der Firewall: $error_message"
         fi
     fi
     
-    print_success "Hetzner Cloud wurde erfolgreich konfiguriert."
+    if [[ "$firewall_operation_success" == "true" ]]; then
+        print_success "Hetzner Cloud Firewall wurde erfolgreich konfiguriert."
+        print_info "Die Firewall-Regeln wurden für folgende Ports eingerichtet:"
+        print_info "SSH: 22"
+        print_info "HTTP: $HTTP_PORT"
+        print_info "HTTPS: $HTTPS_PORT"
+        print_info "MQTT: $MQTT_PORT"
+        print_info "MQTT (SSL): $MQTT_SSL_PORT"
+        print_info "PostgreSQL: $POSTGRES_PORT"
+        print_info "Nextcloud: $NEXTCLOUD_PORT"
+    else
+        print_warning "Die Hetzner Cloud Konfiguration konnte nicht vollständig abgeschlossen werden. Bitte prüfen Sie die Fehler und versuchen Sie es später manuell."
+    fi
 }
 
 # Funktion zum Testen der API-Verbindung

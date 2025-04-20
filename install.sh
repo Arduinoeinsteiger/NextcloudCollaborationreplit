@@ -1435,6 +1435,20 @@ chmod -R 755 "${install_dir}/nginx/ssl"
 chown -R 1883:1883 "${install_dir}/nginx/ssl" || true
 chmod 600 "${install_dir}/nginx/ssl/privkey.pem" || true
 
+# SSL-Verzeichnis für MQTT konfigurieren
+print_info "Konfiguriere SSL-Verzeichnis für MQTT..."
+mkdir -p "${install_dir}/mqtt/certs"
+if [ -f "${install_dir}/nginx/ssl/privkey.pem" ] && [ -f "${install_dir}/nginx/ssl/fullchain.pem" ]; then
+    cp "${install_dir}/nginx/ssl/fullchain.pem" "${install_dir}/mqtt/certs/fullchain.pem"
+    cp "${install_dir}/nginx/ssl/privkey.pem" "${install_dir}/mqtt/certs/privkey.pem"
+    chmod -R 755 "${install_dir}/mqtt/certs"
+    chown -R 1883:1883 "${install_dir}/mqtt/certs" || true
+    chmod 600 "${install_dir}/mqtt/certs/privkey.pem" || true
+    print_success "SSL-Zertifikate für MQTT konfiguriert"
+else
+    print_warning "SSL-Zertifikate nicht gefunden, MQTT wird ohne SSL konfiguriert"
+fi
+
 # IP-Adressen ermitteln und anzeigen
 print_info "Ermittle Ihre öffentlichen IP-Adressen..."
 ip_addresses=($(get_public_ips))

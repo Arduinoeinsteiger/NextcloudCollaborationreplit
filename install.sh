@@ -117,8 +117,9 @@ get_public_ips() {
 configure_cloudflare() {
     local domain=$1
     local ip=$2
+    local subdomains=$3  # Optionaler Parameter: Liste von Subdomains
     
-    print_info "Konfiguriere Cloudflare DNS für Domain $domain..."
+    print_info "Konfiguriere Cloudflare DNS für Domain $domain und Subdomains..."
     
     # Fragen nach Cloudflare API-Token
     print_info "Für die automatische Konfiguration von Cloudflare DNS-Einträgen wird ein API-Token benötigt."
@@ -241,7 +242,35 @@ configure_cloudflare() {
     fi
     
     # Subdomains erstellen
-    local subdomains=("" "api" "mqtt" "www")
+    # Standard-Subdomains plus zusätzliche Subdomains aus dem Parameter $3
+    local default_subdomains=("" "api" "www")
+    local additional_subdomains=()
+    
+    # Wenn zusätzliche Subdomains angegeben wurden, füge sie hinzu
+    if [ ! -z "$3" ]; then
+        additional_subdomains=($3)
+        print_info "Zusätzliche Subdomains: ${additional_subdomains[*]}"
+    fi
+    
+    # Kombiniere alle Subdomains
+    local subdomains=("${default_subdomains[@]}")
+    for subdomain in "${additional_subdomains[@]}"; do
+        # Prüfe, ob die Subdomain bereits in der Liste ist
+        local exists=false
+        for existing in "${subdomains[@]}"; do
+            if [[ "$existing" == "$subdomain" ]]; then
+                exists=true
+                break
+            fi
+        done
+        
+        # Wenn nicht, füge sie hinzu
+        if [[ "$exists" == "false" ]]; then
+            subdomains+=("$subdomain")
+        fi
+    done
+    
+    print_info "Konfiguriere folgende Subdomains: ${subdomains[*]}"
     local all_successful=true
     
     # IPv4-Einträge erstellen
@@ -1164,6 +1193,85 @@ server {
     }
 }
 
+# Nextcloud ExApp Integration
+server {
+    listen 80;
+    listen [::]:80;
+    server_name exapp.\${DOMAIN};
+
+    location / {
+        return 301 https://exapp.\${DOMAIN}\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name exapp.\${DOMAIN};
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+
+    # ExApp CORS-Headers hinzufügen
+    add_header 'Access-Control-Allow-Origin' 'https://\${DOMAIN}' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+    add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, X-Requested-With, X-CSRF-Token' always;
+    add_header 'Access-Control-Allow-Credentials' 'true' always;
+
+    location / {
+        proxy_pass http://exapp:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # WebSocket-Unterstützung für Live-Updates
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+    }
+}
+
+# MQTT WebSocket Zugang für Web-Clients
+server {
+    listen 80;
+    listen [::]:80;
+    server_name mqtt.\${DOMAIN};
+
+    location / {
+        return 301 https://mqtt.\${DOMAIN}\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name mqtt.\${DOMAIN};
+
+    ssl_certificate /etc/nginx/ssl/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+
+    # CORS für WebSocket-Verbindungen
+    add_header 'Access-Control-Allow-Origin' '*' always;
+    add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+    add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range' always;
+
+    location / {
+        proxy_pass http://mqtt:9001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_read_timeout 86400;
+    }
+}
+
 # Nextcloud Frontend
 server {
     listen 80;
@@ -1289,6 +1397,35 @@ services:
     networks:
       - swissairdry_network
 
+  # Nextcloud ExApp Integration
+  exapp:
+    build:
+      context: ./nextcloud
+      dockerfile: Dockerfile.exapp
+    container_name: swissairdry_exapp
+    restart: always
+    volumes:
+      - ${install_dir}/nextcloud/exapp:/app
+    environment:
+      - PORT=8000
+      - API_URL=https://api.\${DOMAIN}
+      - MQTT_BROKER=mqtt.\${DOMAIN}
+      - MQTT_PORT=443
+      - MQTT_USE_WSS=true
+      - NEXTCLOUD_URL=https://\${DOMAIN}
+      - DEBUG=\${DEBUG:-false}
+    depends_on:
+      - api
+      - mqtt
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - swissairdry_network
+
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -1302,6 +1439,8 @@ services:
       - ${install_dir}/nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       api:
+        condition: service_healthy
+      exapp:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
@@ -1323,8 +1462,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Installiere curl für Health-Checks
-RUN apt-get update && apt-get install -y curl && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Installiere curl für Health-Checks und Supervisord für multiple Prozesse
+RUN apt-get update && apt-get install -y curl supervisor && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
@@ -1333,11 +1472,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Erstelle einfachen API Endpunkt für Gesundheitsprüfung
 RUN mkdir -p /app && echo 'from fastapi import FastAPI\nimport uvicorn\n\napp = FastAPI()\n\n@app.get("/health")\nasync def health_check():\n    return {"status": "ok"}\n\nif __name__ == "__main__":\n    uvicorn.run(app, host="0.0.0.0", port=5000)' > /app/run.py
 
+# Erstelle Supervisord-Konfiguration
+RUN mkdir -p /etc/supervisor/conf.d/
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 COPY . .
+
+# Erstelle Verzeichnis für Logs
+RUN mkdir -p /app/logs && chmod 777 /app/logs
 
 EXPOSE 5000
 
-CMD ["python", "run.py"]
+# Starte Supervisord als Hauptprozess
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 EOF
     
     # API requirements.txt erstellen

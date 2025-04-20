@@ -1580,6 +1580,13 @@ MQTT_PORT=${MQTT_PORT}
 MQTT_SSL_ENABLED=false
 MQTT_AUTH_ENABLED=false
 MQTT_ALLOW_ANONYMOUS=true
+
+# ExApp Konfiguration
+EXAPP_URL=https://exapp.${domain}
+API_URL=https://api.${domain}
+NEXTCLOUD_URL=https://${domain}
+SYNC_INTERVAL=300
+DEBUG=false
 EOF
     
     print_success "Umgebungsvariablen-Datei erstellt in ${install_dir}/.env"

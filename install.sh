@@ -1015,24 +1015,45 @@ create_swissairdry_docker_compose() {
     mkdir -p "${install_dir}/nginx/ssl"
     mkdir -p "${install_dir}/postgres/data"
     
-    # Mosquitto Konfiguration erstellen
-    cat > "${install_dir}/mqtt/config/mosquitto.conf" << EOF
+    # Mosquitto Template-Konfiguration erstellen
+    cat > "${install_dir}/mqtt/config/mosquitto.conf.template" << 'EOF'
 # Mosquitto Konfiguration für SwissAirDry
+# Diese Datei wird automatisch erstellt - manuelle Änderungen werden überschrieben
 persistence true
 persistence_location /mosquitto/data
 log_dest file /mosquitto/log/mosquitto.log
 log_dest stdout
 
-# Listener für unverschlüsselte Verbindungen (nur für lokale Verbindungen)
-listener 1883
-allow_anonymous true
+# Listener für unverschlüsselte Verbindungen
+listener ${MQTT_PORT}
+allow_anonymous ${MQTT_ALLOW_ANONYMOUS}
 
-# Listener für verschlüsselte Verbindungen
-listener 8883
-certfile /mosquitto/certs/fullchain.pem
-keyfile /mosquitto/certs/privkey.pem
-require_certificate false
+# WebSockets für Web-Clients
+listener ${MQTT_WS_PORT}
+protocol websockets
+
+# SSL/TLS Konfiguration (wenn SSL aktiviert ist)
+${MQTT_SSL_CONFIG}
+
+# Erweiterte Einstellungen
+max_connections -1
+max_packet_size 16384
+max_inflight_messages 40
+max_queued_messages 1000
+queue_qos0_messages false
+
+# Authentifizierung (wenn aktiviert)
+${MQTT_AUTH_CONFIG}
 EOF
+
+    # Initialen Wert der Umgebungsvariablen festlegen
+    MQTT_ALLOW_ANONYMOUS="true"
+    MQTT_WS_PORT="9001"
+    MQTT_SSL_CONFIG="# listener 8883\n# certfile /mosquitto/certs/fullchain.pem\n# keyfile /mosquitto/certs/privkey.pem\n# require_certificate false"
+    MQTT_AUTH_CONFIG="# password_file /mosquitto/config/mosquitto.passwd"
+    
+    # Erste Mosquitto-Konfiguration aus Template erstellen
+    envsubst < "${install_dir}/mqtt/config/mosquitto.conf.template" > "${install_dir}/mqtt/config/mosquitto.conf"
     
     # Nginx Konfiguration erstellen
     cat > "${install_dir}/nginx/conf.d/default.conf" << EOF

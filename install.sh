@@ -654,6 +654,11 @@ services:
       - MYSQL_PASSWORD=\${MYSQL_PASSWORD}
       - MYSQL_DATABASE=\${MYSQL_DATABASE}
       - MYSQL_USER=\${MYSQL_USER}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p\${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:alpine
@@ -661,6 +666,11 @@ services:
     restart: always
     volumes:
       - ${redis_volume}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     image: nextcloud:latest
@@ -681,7 +691,13 @@ services:
       - db
       - redis
     ports:
-      - "8080:80"
+      - "\${NEXTCLOUD_PORT}:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 networks:
   default:
@@ -781,12 +797,26 @@ server {
     ssl_prefer_server_ciphers on;
     ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
 
+    # Erhöhte Timeouts für Nextcloud
+    proxy_connect_timeout 600;
+    proxy_send_timeout 600;
+    proxy_read_timeout 600;
+    send_timeout 600;
+    
+    client_max_body_size 512M; # Erhöht von Standard 1M für große Uploads
+
     location / {
         proxy_pass http://nextcloud_app:80;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        # Spezifische Headers für Nextcloud
+        proxy_set_header X-Forwarded-Host \$host;
+        proxy_set_header X-Forwarded-Server \$host;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 }
 EOF
@@ -802,13 +832,18 @@ services:
     container_name: swissairdry_mqtt
     restart: always
     ports:
-      - "1883:1883"
-      - "8883:8883"
+      - "\${MQTT_PORT}:1883"
+      - "\${MQTT_SSL_PORT}:8883"
     volumes:
       - ${install_dir}/mqtt/config:/mosquitto/config
       - ${install_dir}/mqtt/data:/mosquitto/data
       - ${install_dir}/mqtt/log:/mosquitto/log
       - ${install_dir}/nginx/ssl:/mosquitto/certs:ro
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$" , "-C", "1", "-i", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - swissairdry_network
 
@@ -824,7 +859,13 @@ services:
       - POSTGRES_USER=\${POSTGRES_USER}
       - POSTGRES_DB=\${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "\${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \${POSTGRES_USER} -d \${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - swissairdry_network
 
@@ -845,8 +886,16 @@ services:
       - NEXTCLOUD_USER=\${NEXTCLOUD_ADMIN_USER}
       - NEXTCLOUD_PASSWORD=\${NEXTCLOUD_ADMIN_PASSWORD}
     depends_on:
-      - postgres
-      - mqtt
+      postgres:
+        condition: service_healthy
+      mqtt:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - swissairdry_network
 
@@ -856,13 +905,19 @@ services:
     container_name: swissairdry_nginx
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "\${HTTP_PORT}:80"
+      - "\${HTTPS_PORT}:443"
     volumes:
       - ${install_dir}/nginx/conf.d:/etc/nginx/conf.d
       - ${install_dir}/nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - swissairdry_network
 
@@ -878,9 +933,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Installiere curl für Health-Checks
+RUN apt-get update && apt-get install -y curl && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Erstelle einfachen API Endpunkt für Gesundheitsprüfung
+RUN mkdir -p /app && echo 'from fastapi import FastAPI\nimport uvicorn\n\napp = FastAPI()\n\n@app.get("/health")\nasync def health_check():\n    return {"status": "ok"}\n\nif __name__ == "__main__":\n    uvicorn.run(app, host="0.0.0.0", port=5000)' > /app/run.py
 
 COPY . .
 
@@ -1133,26 +1194,84 @@ if [[ "$start_services" == "j" || "$start_services" == "J" ]]; then
         print_warning "Nextcloud konnte nicht gestartet werden. Führen Sie 'cd ${install_dir}/nextcloud && docker-compose logs' aus, um Details zu sehen."
     fi
     
+    # Warten auf den Start aller Dienste
+    print_info "Warte auf den vollständigen Start aller Dienste (60 Sekunden)..."
+    sleep 60
+    
     # Verbindungstests durchführen
     print_info "Führe Verbindungstests durch..."
     
+    # Container-Status prüfen
+    print_info "Prüfe Container-Status..."
+    container_status=$(docker ps --format "{{.Names}}: {{.Status}}")
+    echo "$container_status"
+    
     # HTTP/HTTPS-Verbindung testen
+    print_info "Teste HTTP/HTTPS Verbindung..."
     if test_connection "localhost" "$HTTP_PORT" "HTTP Server"; then
         print_success "HTTP-Server ist erreichbar."
+    else
+        print_warning "HTTP-Server ist nicht erreichbar. Prüfe Status mit: docker-compose logs nginx"
+        print_info "Versuche alternativen Test..."
+        if command -v curl &> /dev/null; then
+            curl -s -o /dev/null -w "%{http_code}" http://localhost:$HTTP_PORT || print_warning "curl fehlgeschlagen mit Code: $?"
+        fi
     fi
     
     if test_connection "localhost" "$HTTPS_PORT" "HTTPS Server"; then
         print_success "HTTPS-Server ist erreichbar."
+    else
+        print_warning "HTTPS-Server ist nicht erreichbar. Prüfe Status mit: docker-compose logs nginx"
+        print_info "Versuche alternativen Test..."
+        if command -v curl &> /dev/null; then
+            curl -s -k -o /dev/null -w "%{http_code}" https://localhost:$HTTPS_PORT || print_warning "curl fehlgeschlagen mit Code: $?"
+        fi
     fi
     
     # MQTT-Verbindung testen
+    print_info "Teste MQTT Verbindung..."
     if test_connection "localhost" "$MQTT_PORT" "MQTT Broker"; then
         print_success "MQTT-Broker ist erreichbar."
+    else
+        print_warning "MQTT-Broker ist nicht erreichbar. Prüfe Status mit: docker-compose logs mqtt"
+        print_info "Wenn Sie mosquitto-clients installiert haben, können Sie mit folgendem Befehl testen:"
+        print_info "mosquitto_sub -h localhost -p $MQTT_PORT -t test -C 1"
     fi
     
     # PostgreSQL-Verbindung testen
+    print_info "Teste PostgreSQL Verbindung..."
     if test_connection "localhost" "$POSTGRES_PORT" "PostgreSQL"; then
         print_success "PostgreSQL-Datenbank ist erreichbar."
+    else
+        print_warning "PostgreSQL-Datenbank ist nicht erreichbar. Prüfe Status mit: docker-compose logs postgres"
+        if command -v pg_isready &> /dev/null; then
+            print_info "Testergebnis pg_isready:"
+            pg_isready -h localhost -p $POSTGRES_PORT || print_warning "pg_isready fehlgeschlagen mit Code: $?"
+        fi
+    fi
+    
+    # Prüfen auf mögliche Firewall-Blockierungen
+    print_info "Prüfe auf mögliche Firewall-Blockierungen..."
+    if command -v ufw &> /dev/null; then
+        ufw_status=$(sudo ufw status)
+        if echo "$ufw_status" | grep -q "Status: active"; then
+            print_warning "Firewall ist aktiv. Bitte stellen Sie sicher, dass die Ports freigegeben sind:"
+            print_info "sudo ufw allow $HTTP_PORT/tcp"
+            print_info "sudo ufw allow $HTTPS_PORT/tcp"
+            print_info "sudo ufw allow $MQTT_PORT/tcp"
+            print_info "sudo ufw allow $POSTGRES_PORT/tcp"
+            print_info "sudo ufw allow $NEXTCLOUD_PORT/tcp"
+        else
+            print_success "Keine aktive UFW-Firewall erkannt."
+        fi
+    elif command -v firewall-cmd &> /dev/null; then
+        print_warning "FirewallD erkannt. Bitte stellen Sie sicher, dass die Ports freigegeben sind:"
+        print_info "sudo firewall-cmd --permanent --add-port=$HTTP_PORT/tcp"
+        print_info "sudo firewall-cmd --permanent --add-port=$HTTPS_PORT/tcp"
+        print_info "sudo firewall-cmd --permanent --add-port=$MQTT_PORT/tcp"
+        print_info "sudo firewall-cmd --permanent --add-port=$POSTGRES_PORT/tcp"
+        print_info "sudo firewall-cmd --permanent --add-port=$NEXTCLOUD_PORT/tcp"
+        print_info "sudo firewall-cmd --reload"
     fi
     
     print_success "Alle Dienste wurden gestartet!"

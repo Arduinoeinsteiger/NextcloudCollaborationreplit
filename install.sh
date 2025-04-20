@@ -78,6 +78,41 @@ test_connection() {
     fi
 }
 
+# Funktion zum Ermitteln der öffentlichen IP-Adressen
+get_public_ips() {
+    print_info "Ermittle öffentliche IP-Adressen..."
+    
+    # IPv4-Adresse ermitteln
+    local ipv4=$(curl -s -4 https://api.ipify.org 2>/dev/null || curl -s -4 https://ifconfig.me 2>/dev/null || curl -s -4 https://icanhazip.com 2>/dev/null)
+    if [ -z "$ipv4" ]; then
+        print_warning "Konnte keine öffentliche IPv4-Adresse ermitteln. Verwende lokale Adresse."
+        ipv4=$(ip -4 addr show scope global | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n 1)
+    fi
+    
+    # IPv6-Adresse ermitteln
+    local ipv6=$(curl -s -6 https://api6.ipify.org 2>/dev/null || curl -s -6 https://ifconfig.co 2>/dev/null || curl -s -6 https://icanhazip.com 2>/dev/null)
+    if [ -z "$ipv6" ]; then
+        print_warning "Konnte keine öffentliche IPv6-Adresse ermitteln. Verwende lokale Adresse."
+        ipv6=$(ip -6 addr show scope global | grep -oP '(?<=inet6\s)[\da-f:]+' | head -n 1)
+    fi
+    
+    if [ -n "$ipv4" ]; then
+        print_success "Öffentliche IPv4-Adresse: $ipv4"
+    else
+        print_error "Konnte keine IPv4-Adresse ermitteln."
+        ipv4="127.0.0.1"
+    fi
+    
+    if [ -n "$ipv6" ]; then
+        print_success "Öffentliche IPv6-Adresse: $ipv6"
+    else
+        print_warning "Konnte keine IPv6-Adresse ermitteln. IPv6 wird nicht konfiguriert."
+    fi
+    
+    # Array mit IPv4 und IPv6 zurückgeben
+    echo "$ipv4 $ipv6"
+}
+
 # Funktion zum Konfigurieren von Cloudflare DNS
 configure_cloudflare() {
     local domain=$1
@@ -103,7 +138,7 @@ configure_cloudflare() {
         apt-get update && apt-get install -y jq
     fi
     
-    # Token und Zone ID abfragen und validieren
+    # Token abfragen und validieren, Zone ID automatisch ermitteln
     local token_valid=false
     local cf_token=""
     local cf_zone_id=""
@@ -112,23 +147,74 @@ configure_cloudflare() {
         read -sp "Bitte geben Sie Ihren Cloudflare API-Token ein: " cf_token
         echo ""
         
-        read -p "Bitte geben Sie Ihre Cloudflare Zone ID ein (zu finden in der Übersicht Ihrer Domain): " cf_zone_id
-        
-        print_info "Teste Cloudflare API-Token und Zone ID..."
-        # Teste den Token durch Abfrage der Zone-Details
-        local test_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cf_zone_id" \
+        print_info "Teste Cloudflare API-Token..."
+        # Zuerst prüfen wir, ob der Token gültig ist, indem wir alle Zonen abfragen
+        local zones_response=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?per_page=50" \
             -H "Authorization: Bearer $cf_token" \
             -H "Content-Type: application/json")
         
-        local success=$(echo "$test_response" | jq -r '.success')
+        local success=$(echo "$zones_response" | jq -r '.success')
         
         if [[ "$success" == "true" ]]; then
-            local zone_name=$(echo "$test_response" | jq -r '.result.name')
-            print_success "API-Token und Zone ID sind gültig. Zone: $zone_name"
-            token_valid=true
+            # Token ist gültig, jetzt versuchen wir die Zone für die angegebene Domain zu finden
+            print_success "API-Token ist gültig."
+            print_info "Suche nach Zone für Domain $domain..."
+            
+            local zone_count=$(echo "$zones_response" | jq -r '.result | length')
+            if [[ "$zone_count" -eq 0 ]]; then
+                print_error "Keine Zonen mit diesem API-Token gefunden. Stellen Sie sicher, dass der Token Zugriff auf die richtigen Zonen hat."
+                read -p "Möchten Sie es erneut versuchen? (j/n): " retry
+                if [[ "$retry" != "j" && "$retry" != "J" ]]; then
+                    print_info "Cloudflare-Konfiguration übersprungen."
+                    return
+                fi
+                continue
+            fi
+            
+            # Alle Zonen anzeigen und nach passender Domain suchen
+            local found=false
+            local zones_info=""
+            
+            # Zonen-Liste erstellen
+            for i in $(seq 0 $(($zone_count - 1))); do
+                local zone_name=$(echo "$zones_response" | jq -r ".result[$i].name")
+                local zone_id=$(echo "$zones_response" | jq -r ".result[$i].id")
+                local zone_status=$(echo "$zones_response" | jq -r ".result[$i].status")
+                
+                zones_info+="$i) $zone_name (ID: $zone_id, Status: $zone_status)"$'\n'
+                
+                # Prüfen, ob die Domain gleich oder eine Subdomain der Zone ist
+                if [[ "$domain" == "$zone_name" || "$domain" == *".$zone_name" ]]; then
+                    cf_zone_id=$zone_id
+                    found=true
+                    print_success "Zone für $domain automatisch gefunden: $zone_name (ID: $cf_zone_id)"
+                    token_valid=true
+                    break
+                fi
+            done
+            
+            # Wenn keine passende Zone gefunden wurde, dem Benutzer erlauben, eine auszuwählen
+            if [[ "$found" == "false" ]]; then
+                print_warning "Keine automatisch passende Zone für $domain gefunden."
+                echo "Verfügbare Zonen:"
+                echo "$zones_info"
+                read -p "Wählen Sie die Nummer der passenden Zone (oder drücken Sie Enter zum Abbrechen): " zone_number
+                
+                if [[ -z "$zone_number" ]]; then
+                    print_info "Cloudflare-Konfiguration übersprungen."
+                    return
+                elif [[ "$zone_number" -ge 0 && "$zone_number" -lt "$zone_count" ]]; then
+                    cf_zone_id=$(echo "$zones_response" | jq -r ".result[$zone_number].id")
+                    local selected_zone_name=$(echo "$zones_response" | jq -r ".result[$zone_number].name")
+                    print_success "Zone ausgewählt: $selected_zone_name (ID: $cf_zone_id)"
+                    token_valid=true
+                else
+                    print_error "Ungültige Auswahl. Bitte erneut versuchen."
+                fi
+            fi
         else
-            local error_message=$(echo "$test_response" | jq -r '.errors[0].message')
-            print_error "API-Token oder Zone ID ungültig: $error_message"
+            local error_message=$(echo "$zones_response" | jq -r '.errors[0].message')
+            print_error "API-Token ungültig: $error_message"
             read -p "Möchten Sie es erneut versuchen? (j/n): " retry
             if [[ "$retry" != "j" && "$retry" != "J" ]]; then
                 print_info "Cloudflare-Konfiguration übersprungen."
@@ -137,24 +223,35 @@ configure_cloudflare() {
         fi
     done
     
-    # IP-Adresse ermitteln, falls nicht angegeben
+    # Öffentliche IP-Adressen ermitteln
+    local ip_addresses=($ip)
+    local ipv4=""
+    local ipv6=""
+    
     if [ -z "$ip" ]; then
-        ip=$(curl -s https://api.ipify.org)
+        ip_addresses=($(get_public_ips))
     fi
     
-    print_info "Verwende IP-Adresse: $ip"
+    ipv4=${ip_addresses[0]}
+    ipv6=${ip_addresses[1]}
+    
+    print_info "Verwende IPv4-Adresse: $ipv4"
+    if [ -n "$ipv6" ]; then
+        print_info "Verwende IPv6-Adresse: $ipv6"
+    fi
     
     # Subdomains erstellen
     local subdomains=("" "api" "mqtt" "www")
     local all_successful=true
     
+    # IPv4-Einträge erstellen
     for subdomain in "${subdomains[@]}"; do
         local name=$subdomain
         if [ -z "$subdomain" ]; then
             name="@"
         fi
         
-        print_info "Erstelle/Aktualisiere DNS-Eintrag für $name.$domain..."
+        print_info "Erstelle/Aktualisiere IPv4 DNS-Eintrag für $name.$domain..."
         
         # Überprüfen, ob der Eintrag bereits existiert
         local record_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records?type=A&name=$name.$domain" \
@@ -167,13 +264,13 @@ configure_cloudflare() {
             update_response=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records/$record_id" \
                 -H "Authorization: Bearer $cf_token" \
                 -H "Content-Type: application/json" \
-                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ip\",\"ttl\":1,\"proxied\":true}")
+                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":true}")
             
             local success=$(echo "$update_response" | jq -r '.success')
             if [[ "$success" == "true" ]]; then
-                print_success "DNS-Eintrag für $name.$domain aktualisiert."
+                print_success "IPv4 DNS-Eintrag für $name.$domain aktualisiert."
             else
-                print_error "Fehler beim Aktualisieren des DNS-Eintrags für $name.$domain"
+                print_error "Fehler beim Aktualisieren des IPv4 DNS-Eintrags für $name.$domain"
                 local error_message=$(echo "$update_response" | jq -r '.errors[0].message')
                 print_error "Fehlermeldung: $error_message"
                 all_successful=false
@@ -183,19 +280,71 @@ configure_cloudflare() {
             update_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records" \
                 -H "Authorization: Bearer $cf_token" \
                 -H "Content-Type: application/json" \
-                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ip\",\"ttl\":1,\"proxied\":true}")
+                --data "{\"type\":\"A\",\"name\":\"$name\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":true}")
             
             local success=$(echo "$update_response" | jq -r '.success')
             if [[ "$success" == "true" ]]; then
-                print_success "DNS-Eintrag für $name.$domain erstellt."
+                print_success "IPv4 DNS-Eintrag für $name.$domain erstellt."
             else
-                print_error "Fehler beim Erstellen des DNS-Eintrags für $name.$domain"
+                print_error "Fehler beim Erstellen des IPv4 DNS-Eintrags für $name.$domain"
                 local error_message=$(echo "$update_response" | jq -r '.errors[0].message')
                 print_error "Fehlermeldung: $error_message"
                 all_successful=false
             fi
         fi
     done
+    
+    # IPv6-Einträge erstellen, wenn verfügbar
+    if [ -n "$ipv6" ]; then
+        for subdomain in "${subdomains[@]}"; do
+            local name=$subdomain
+            if [ -z "$subdomain" ]; then
+                name="@"
+            fi
+            
+            print_info "Erstelle/Aktualisiere IPv6 DNS-Eintrag für $name.$domain..."
+            
+            # Überprüfen, ob der Eintrag bereits existiert
+            local record_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records?type=AAAA&name=$name.$domain" \
+                -H "Authorization: Bearer $cf_token" \
+                -H "Content-Type: application/json" | jq -r '.result[0].id')
+            
+            local update_response=""
+            if [ "$record_id" != "null" ] && [ ! -z "$record_id" ]; then
+                # Eintrag aktualisieren
+                update_response=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records/$record_id" \
+                    -H "Authorization: Bearer $cf_token" \
+                    -H "Content-Type: application/json" \
+                    --data "{\"type\":\"AAAA\",\"name\":\"$name\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":true}")
+                
+                local success=$(echo "$update_response" | jq -r '.success')
+                if [[ "$success" == "true" ]]; then
+                    print_success "IPv6 DNS-Eintrag für $name.$domain aktualisiert."
+                else
+                    print_error "Fehler beim Aktualisieren des IPv6 DNS-Eintrags für $name.$domain"
+                    local error_message=$(echo "$update_response" | jq -r '.errors[0].message')
+                    print_error "Fehlermeldung: $error_message"
+                    # IPv6-Fehler sind nicht kritisch, daher all_successful nicht ändern
+                fi
+            else
+                # Neuen Eintrag erstellen
+                update_response=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cf_zone_id/dns_records" \
+                    -H "Authorization: Bearer $cf_token" \
+                    -H "Content-Type: application/json" \
+                    --data "{\"type\":\"AAAA\",\"name\":\"$name\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":true}")
+                
+                local success=$(echo "$update_response" | jq -r '.success')
+                if [[ "$success" == "true" ]]; then
+                    print_success "IPv6 DNS-Eintrag für $name.$domain erstellt."
+                else
+                    print_error "Fehler beim Erstellen des IPv6 DNS-Eintrags für $name.$domain"
+                    local error_message=$(echo "$update_response" | jq -r '.errors[0].message')
+                    print_error "Fehlermeldung: $error_message"
+                    # IPv6-Fehler sind nicht kritisch, daher all_successful nicht ändern
+                fi
+            fi
+        done
+    fi
     
     if [[ "$all_successful" == "true" ]]; then
         print_success "Cloudflare DNS-Einträge wurden erfolgreich konfiguriert."

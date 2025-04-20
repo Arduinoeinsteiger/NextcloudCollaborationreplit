@@ -1,0 +1,193 @@
+Ich sehe, dass Sie einen Timeout-Fehler (Error 522) erhalten. Dies deutet normalerweise auf ein Verbindungsproblem zwischen dem Client und dem Server hin. Lassen Sie uns die Situation systematisch untersuchen.
+
+Zuerst überprüfen wir, ob alle Container ordnungsgemäß laufen:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml ps
+```
+Ich sehe mehrere Probleme:
+1. Der API-Container ist nicht aktiv (Status: Exit 0)
+2. Der Nginx-Container ist nicht aktiv (Status: Exit 0)
+3. Der MQTT-Container läuft, ist aber als "unhealthy" markiert
+
+Lassen Sie uns zuerst die Nginx-Logs überprüfen:
+
+```bash
+docker logs swissairdry_nginx
+```
+Jetzt überprüfen wir die API-Logs:
+
+```bash
+docker logs swissairdry_api
+```
+Lassen Sie uns die Container neu starten und dabei die Logs in Echtzeit beobachten:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml up -d && docker-compose -f /sda3/docker-compose.yml logs -f
+```
+Es scheint ein Problem mit der Abhängigkeit zwischen den Containern zu geben. Lassen Sie uns die Container einzeln neu starten, beginnend mit der Datenbank:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml stop && docker-compose -f /sda3/docker-compose.yml up -d postgres && sleep 30 && docker-compose -f /sda3/docker-compose.yml up -d mqtt && sleep 10 && docker-compose -f /sda3/docker-compose.yml up -d api && sleep 10 && docker-compose -f /sda3/docker-compose.yml up -d nginx
+```
+Entschuldigung für die Unterbrechung. Lassen Sie uns die Container einzeln neu starten und dabei die Logs überprüfen:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml stop postgres && docker-compose -f /sda3/docker-compose.yml up -d postgres
+```
+Warten wir einen Moment und überprüfen dann den Status:
+
+```bash
+sleep 20 && docker ps -a | grep swissairdry
+```
+Postgres läuft jetzt gesund. Lassen Sie uns als nächstes die API starten und ihre Logs überprüfen:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml up -d api
+```
+Es scheint ein Problem mit der MQTT-Abhängigkeit zu geben. Lassen Sie uns den MQTT-Container neu starten und seine Logs überprüfen:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml stop mqtt && docker-compose -f /sda3/docker-compose.yml up -d mqtt && docker logs -f swissairdry_mqtt
+```
+Lassen Sie uns die Konfiguration des MQTT-Containers überprüfen:
+
+```bash
+cat /sda3/mqtt/config/mosquitto.conf
+```
+Ich sehe mehrere potenzielle Probleme:
+
+1. Die SSL-Zertifikate sind möglicherweise nicht korrekt eingerichtet
+2. Der MQTT-Container ist als "unhealthy" markiert
+3. Die API kann nicht starten, weil sie auf einen gesunden MQTT-Container wartet
+
+Lassen Sie uns zuerst die SSL-Zertifikate überprüfen:
+
+```bash
+ls -la /sda3/nginx/ssl/
+```
+Die Zertifikate scheinen vorhanden zu sein und die richtigen Berechtigungen zu haben. Lassen Sie uns die MQTT-Konfiguration anpassen, um zunächst nur den unverschlüsselten Port zu verwenden und den SSL-Port vorübergehend zu deaktivieren:
+
+```properties:/sda3/mqtt/config/mosquitto.conf
+# Mosquitto Konfiguration für SwissAirDry
+persistence true
+persistence_location /mosquitto/data
+log_dest file /mosquitto/log/mosquitto.log
+log_dest stdout
+
+# Listener für unverschlüsselte Verbindungen (nur für lokale Verbindungen)
+listener 1883
+allow_anonymous true
+
+# Listener für verschlüsselte Verbindungen
+#listener 8883
+#certfile /mosquitto/certs/fullchain.pem
+#keyfile /mosquitto/certs/privkey.pem
+#require_certificate false
+```
+Jetzt starten wir den MQTT-Container neu:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml restart mqtt
+```
+Überprüfen wir den Status des MQTT-Containers:
+
+```bash
+sleep 10 && docker ps | grep mqtt
+```
+Jetzt, wo der MQTT-Container läuft, lassen Sie uns die API starten:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml up -d api
+```
+Es scheint, dass der MQTT-Container immer noch als "unhealthy" markiert ist. Lassen Sie uns den Health-Check im Docker-Compose-File anpassen:
+
+```compose:/sda3/docker-compose.yml
+version: '3'
+
+services:
+  # MQTT Broker
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: swissairdry_mqtt
+    restart: always
+    ports:
+      - "${MQTT_PORT}:1883"
+      - "${MQTT_SSL_PORT}:8883"
+    volumes:
+      - /sda3/mqtt/config:/mosquitto/config
+      - /sda3/mqtt/data:/mosquitto/data
+      - /sda3/mqtt/log:/mosquitto/log
+      - /sda3/nginx/ssl:/mosquitto/certs:ro
+    healthcheck:
+      test: ["CMD", "timeout", "2", "mosquitto_sub", "-t", "test", "-C", "1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - swissairdry_network
+
+// ... existing code ...
+```
+Jetzt starten wir die Container neu:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml down && docker-compose -f /sda3/docker-compose.yml up -d
+```
+Lassen Sie uns die MQTT-Logs überprüfen:
+
+```bash
+docker logs swissairdry_mqtt
+```
+Der MQTT-Broker scheint jetzt zu funktionieren, aber wir haben immer noch das Problem mit den read-only Zertifikaten. Lassen Sie uns das Volume-Mount für die Zertifikate im Docker-Compose-File anpassen:
+
+```compose:/sda3/docker-compose.yml
+version: '3'
+
+services:
+  # MQTT Broker
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: swissairdry_mqtt
+    restart: always
+    ports:
+      - "${MQTT_PORT}:1883"
+      - "${MQTT_SSL_PORT}:8883"
+    volumes:
+      - /sda3/mqtt/config:/mosquitto/config
+      - /sda3/mqtt/data:/mosquitto/data
+      - /sda3/mqtt/log:/mosquitto/log
+      - /sda3/nginx/ssl:/mosquitto/certs
+    healthcheck:
+      test: ["CMD", "timeout", "2", "mosquitto_sub", "-t", "test", "-C", "1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - swissairdry_network
+
+// ... existing code ...
+```
+Jetzt starten wir die Container erneut neu:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml down && docker-compose -f /sda3/docker-compose.yml up -d
+```
+Es sieht so aus, dass der Befehl unterbrochen wurde. Lassen Sie uns den Status der Container überprüfen:
+
+```bash
+docker ps -a | grep swissairdry
+```
+Die Basis-Container (MQTT und Postgres) laufen bereits. Lassen Sie uns die API und Nginx-Container einzeln starten:
+
+```bash
+docker-compose -f /sda3/docker-compose.yml up -d api
+```
+Es scheint, dass wir einige Probleme mit der Ausführung der Befehle haben. Ich schlage vor, dass wir folgende Schritte durchführen:
+
+1. Überprüfen Sie die Berechtigungen der SSL-Zertifikate und des Verzeichnisses
+2. Stellen Sie sicher, dass der MQTT-Container die Zertifikate lesen und schreiben kann
+3. Überprüfen Sie die API-Konfiguration und Logs
+
+Möchten Sie, dass ich mit einem dieser Schritte fortfahre, oder haben Sie eine andere Vorgehensweise im Sinn?
+

@@ -216,7 +216,7 @@ Diese Anleitung hilft Ihnen bei der Behebung häufiger Probleme mit dem SwissAir
 
 ### MQTT-Verbindungsprobleme
 
-**Symptom**: Geräte können keine Verbindung zum MQTT-Broker herstellen.
+**Symptom**: Geräte können keine Verbindung zum MQTT-Broker herstellen oder MQTT-Container startet ständig neu.
 
 **Lösungsansätze**:
 
@@ -236,12 +236,38 @@ Diese Anleitung hilft Ihnen bei der Behebung häufiger Probleme mit dem SwissAir
    netstat -tulpn | grep -E '1883|8883'
    ```
 
-4. MQTT-Broker neustarten:
+4. **Problem mit SSL-Zertifikaten für MQTT beheben**:
+   
+   Wenn in den Logs Fehler zu "Permission denied" oder Problemen mit den SSL-Zertifikaten erscheinen:
    ```bash
+   # Zertifikats-Berechtigungsproblem beheben
+   sudo chmod -R 755 /opt/swissairdry/nginx/ssl
+   sudo chown -R 1883:1883 /opt/swissairdry/nginx/ssl
+   sudo chmod 600 /opt/swissairdry/nginx/ssl/privkey.pem
+   
+   # Oder alternativ in docker-compose.yml das :ro Flag entfernen
+   # - /opt/swissairdry/nginx/ssl:/mosquitto/certs:ro → - /opt/swissairdry/nginx/ssl:/mosquitto/certs
+   ```
+
+5. Bei anhaltenden SSL-Problemen die SSL-Konfiguration temporär deaktivieren:
+   ```bash
+   # In /opt/swissairdry/mqtt/config/mosquitto.conf die SSL-Listener-Zeilen auskommentieren:
+   # listener 8883
+   # certfile /mosquitto/certs/fullchain.pem
+   # keyfile /mosquitto/certs/privkey.pem
+   # require_certificate false
+   ```
+
+6. MQTT-Broker neustarten mit korrektem User:
+   ```bash
+   # In docker-compose.yml den user-Parameter ergänzen (falls fehlend)
+   # user: "1883"  # Unter dem volumes-Bereich
+   
+   # Dann neu starten
    docker-compose restart mqtt
    ```
 
-5. MQTT-Verbindung mit einem Test-Client prüfen:
+7. MQTT-Verbindung mit einem Test-Client prüfen:
    ```bash
    docker run --rm -it eclipse-mosquitto mosquitto_pub -h ihre-domain.de -p 1883 -t test -m "hello"
    ```

@@ -1127,11 +1127,12 @@ services:
     ports:
       - "\${MQTT_PORT}:1883"
       - "\${MQTT_SSL_PORT}:8883"
+    user: "1883"
     volumes:
       - ${install_dir}/mqtt/config:/mosquitto/config
       - ${install_dir}/mqtt/data:/mosquitto/data
       - ${install_dir}/mqtt/log:/mosquitto/log
-      - ${install_dir}/nginx/ssl:/mosquitto/certs:ro
+      - ${install_dir}/nginx/ssl:/mosquitto/certs
     healthcheck:
       test: ["CMD", "mosquitto_sub", "-t", "$$" , "-C", "1", "-i", "healthcheck"]
       interval: 30s
@@ -1415,13 +1416,46 @@ else
     print_success "Docker-Netzwerk 'swissairdry_network' existiert bereits."
 fi
 
+# Berechtigungen für MQTT anpassen
+print_info "Setze Berechtigungen für SSL-Verzeichnis..."
+mkdir -p "${install_dir}/nginx/ssl"
+# Erstelle einen MQTT-Benutzer im Container falls er nicht existiert
+if ! id -u 1883 &>/dev/null; then
+    print_info "Erstelle MQTT-Benutzer (ID: 1883)..."
+    groupadd -g 1883 mosquitto || true
+    useradd -u 1883 -g 1883 -M -s /usr/sbin/nologin mosquitto || true
+fi
+
 # SSL-Zertifikate einrichten
 setup_ssl "$domain_name" "${install_dir}/nginx/ssl"
+
+# Berechtigungen für SSL-Verzeichnis setzen
+print_info "Setze Berechtigungen für SSL-Verzeichnis..."
+chmod -R 755 "${install_dir}/nginx/ssl"
+chown -R 1883:1883 "${install_dir}/nginx/ssl" || true
+chmod 600 "${install_dir}/nginx/ssl/privkey.pem" || true
+
+# IP-Adressen ermitteln und anzeigen
+print_info "Ermittle Ihre öffentlichen IP-Adressen..."
+ip_addresses=($(get_public_ips))
+ipv4=${ip_addresses[0]}
+ipv6=${ip_addresses[1]}
+
+print_info "-------------------------------------------------"
+print_info "WICHTIG: Die folgenden IP-Adressen werden für DNS verwendet:"
+print_info "IPv4: $ipv4"
+if [ -n "$ipv6" ]; then
+    print_info "IPv6: $ipv6"
+fi
+print_info "-------------------------------------------------"
+print_info "Stellen Sie sicher, dass diese IP-Adressen in Ihrer Cloudflare/DNS-Konfiguration erlaubt sind."
+print_info "Wenn Sie einen Cloudflare API-Token verwenden, muss dieser Zugriff auf diese IPs haben."
+print_info "-------------------------------------------------"
 
 # Fragen, ob Cloudflare konfiguriert werden soll
 read -p "Möchten Sie Cloudflare DNS für Ihre Domain konfigurieren? (j/n): " configure_cf
 if [[ "$configure_cf" == "j" || "$configure_cf" == "J" ]]; then
-    configure_cloudflare "$domain_name"
+    configure_cloudflare "$domain_name" "$ipv4 $ipv6"
 fi
 
 # Fragen, ob Hetzner Cloud konfiguriert werden soll

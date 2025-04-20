@@ -1015,25 +1015,101 @@ create_swissairdry_docker_compose() {
     mkdir -p "${install_dir}/nginx/ssl"
     mkdir -p "${install_dir}/postgres/data"
     
-    # Mosquitto Template-Konfiguration erstellen
-    cat > "${install_dir}/mqtt/config/mosquitto.conf.template" << 'EOF'
+    # Mosquitto Konfiguration direkt erstellen
+    cat > "${install_dir}/mqtt/config/mosquitto.conf" << EOF
 # Mosquitto Konfiguration für SwissAirDry
 # Diese Datei wird automatisch erstellt - manuelle Änderungen werden überschrieben
+
+# Netzwerk-Einstellungen
+listener 1883
+allow_anonymous true
+
+# WebSockets für Web-Clients
+listener 9001
+protocol websockets
+
+# Persistenz und Logging
 persistence true
 persistence_location /mosquitto/data
 log_dest file /mosquitto/log/mosquitto.log
 log_dest stdout
+log_type all
 
-# Listener für unverschlüsselte Verbindungen
-listener ${MQTT_PORT}
-allow_anonymous ${MQTT_ALLOW_ANONYMOUS}
+# Erweiterte Einstellungen
+max_connections -1
+max_packet_size 16384
+max_inflight_messages 40
+max_queued_messages 1000
+queue_qos0_messages false
+EOF
+
+    # Erstelle Update-Skript für MQTT-Konfiguration
+    cat > "${install_dir}/update_mqtt_config.sh" << 'EOF'
+#!/bin/bash
+
+# Farben für Ausgaben
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Funktionen
+print_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+print_success() { echo -e "${GREEN}[ERFOLG]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[WARNUNG]${NC} $1"; }
+print_error() { echo -e "${RED}[FEHLER]${NC} $1"; }
+
+# Pfade
+MQTT_CONFIG_DIR="./mqtt/config"
+MQTT_CONFIG="${MQTT_CONFIG_DIR}/mosquitto.conf"
+ENV_FILE="./.env"
+
+# Prüfen, ob die .env-Datei existiert
+if [ ! -f "$ENV_FILE" ]; then
+    print_error "Umgebungsvariablen-Datei nicht gefunden: $ENV_FILE"
+    exit 1
+fi
+
+# Lade Umgebungsvariablen
+source "$ENV_FILE"
+
+print_info "Aktualisiere MQTT-Konfiguration..."
+
+# SSL-Konfiguration basierend auf Umgebungsvariablen
+SSL_CONFIG=""
+if [ "${MQTT_SSL_ENABLED:-false}" = "true" ]; then
+    SSL_CONFIG="# SSL/TLS Konfiguration\nlistener ${MQTT_SSL_PORT:-8883}\ncertfile /mosquitto/certs/fullchain.pem\nkeyfile /mosquitto/certs/privkey.pem\nrequire_certificate false"
+else
+    SSL_CONFIG="# SSL/TLS Konfiguration (deaktiviert)\n# listener ${MQTT_SSL_PORT:-8883}\n# certfile /mosquitto/certs/fullchain.pem\n# keyfile /mosquitto/certs/privkey.pem\n# require_certificate false"
+fi
+
+# Auth-Konfiguration basierend auf Umgebungsvariablen
+AUTH_CONFIG=""
+if [ "${MQTT_AUTH_ENABLED:-false}" = "true" ]; then
+    AUTH_CONFIG="# Authentifizierung\nallow_anonymous false\npassword_file /mosquitto/config/mosquitto.passwd"
+else
+    AUTH_CONFIG="# Authentifizierung (deaktiviert)\nallow_anonymous true\n# password_file /mosquitto/config/mosquitto.passwd"
+fi
+
+# Neue Konfiguration erstellen
+cat > "$MQTT_CONFIG" << EOL
+# Mosquitto Konfiguration für SwissAirDry
+# Diese Datei wird automatisch erstellt - manuelle Änderungen werden überschrieben
+
+# Netzwerk-Einstellungen
+listener ${MQTT_PORT:-1883}
 
 # WebSockets für Web-Clients
-listener ${MQTT_WS_PORT}
+listener ${MQTT_WS_PORT:-9001}
 protocol websockets
 
-# SSL/TLS Konfiguration (wenn SSL aktiviert ist)
-${MQTT_SSL_CONFIG}
+# Persistenz und Logging
+persistence true
+persistence_location /mosquitto/data
+log_dest file /mosquitto/log/mosquitto.log
+log_dest stdout
+log_type all
 
 # Erweiterte Einstellungen
 max_connections -1
@@ -1042,18 +1118,17 @@ max_inflight_messages 40
 max_queued_messages 1000
 queue_qos0_messages false
 
-# Authentifizierung (wenn aktiviert)
-${MQTT_AUTH_CONFIG}
+$(echo -e "$SSL_CONFIG")
+
+$(echo -e "$AUTH_CONFIG")
+EOL
+
+print_success "MQTT-Konfiguration aktualisiert!"
+print_info "Um Änderungen anzuwenden, führen Sie aus: docker-compose restart mqtt"
 EOF
 
-    # Initialen Wert der Umgebungsvariablen festlegen
-    MQTT_ALLOW_ANONYMOUS="true"
-    MQTT_WS_PORT="9001"
-    MQTT_SSL_CONFIG="# listener 8883\n# certfile /mosquitto/certs/fullchain.pem\n# keyfile /mosquitto/certs/privkey.pem\n# require_certificate false"
-    MQTT_AUTH_CONFIG="# password_file /mosquitto/config/mosquitto.passwd"
-    
-    # Erste Mosquitto-Konfiguration aus Template erstellen
-    envsubst < "${install_dir}/mqtt/config/mosquitto.conf.template" > "${install_dir}/mqtt/config/mosquitto.conf"
+    chmod +x "${install_dir}/update_mqtt_config.sh"
+    print_success "MQTT-Konfigurationsskript erstellt: ${install_dir}/update_mqtt_config.sh"
     
     # Nginx Konfiguration erstellen
     cat > "${install_dir}/nginx/conf.d/default.conf" << EOF
@@ -1334,6 +1409,7 @@ NEXTCLOUD_PORT=${NEXTCLOUD_PORT}
 POSTGRES_PORT=${POSTGRES_PORT}
 MQTT_PORT=${MQTT_PORT}
 MQTT_SSL_PORT=${MQTT_SSL_PORT}
+MQTT_WS_PORT=9001
 
 # Nextcloud Konfiguration
 NEXTCLOUD_ADMIN_USER=admin
@@ -1354,6 +1430,9 @@ POSTGRES_DB=swissairdry
 # MQTT Konfiguration
 MQTT_HOST=mqtt
 MQTT_PORT=${MQTT_PORT}
+MQTT_SSL_ENABLED=false
+MQTT_AUTH_ENABLED=false
+MQTT_ALLOW_ANONYMOUS=true
 EOF
     
     print_success "Umgebungsvariablen-Datei erstellt in ${install_dir}/.env"

@@ -1566,10 +1566,19 @@ print_info "Stellen Sie sicher, dass diese IP-Adressen in Ihrer Cloudflare/DNS-K
 print_info "Wenn Sie einen Cloudflare API-Token verwenden, muss dieser Zugriff auf diese IPs haben."
 print_info "-------------------------------------------------"
 
+# Subdomains erklären
+print_info "\nFolgende Subdomains werden für SwissAirDry benötigt:"
+print_info "1. ${domain_name} - Hauptdomain für Nextcloud und Web-Interface"
+print_info "2. api.${domain_name} - API-Server für Geräte und API-Clients"
+print_info "3. exapp.${domain_name} - Nextcloud ExApp Integration (Dashboard)"
+print_info "4. mqtt.${domain_name} - MQTT-Broker (optional für WebSocket-Clients)"
+print_info "-------------------------------------------------"
+
 # Fragen, ob Cloudflare konfiguriert werden soll
 read -p "Möchten Sie Cloudflare DNS für Ihre Domain konfigurieren? (j/n): " configure_cf
 if [[ "$configure_cf" == "j" || "$configure_cf" == "J" ]]; then
-    configure_cloudflare "$domain_name" "$ipv4 $ipv6"
+    # Modifizierter Aufruf für alle Subdomains
+    configure_cloudflare "$domain_name" "$ipv4 $ipv6" "api exapp mqtt"
 fi
 
 # Fragen, ob Hetzner Cloud konfiguriert werden soll

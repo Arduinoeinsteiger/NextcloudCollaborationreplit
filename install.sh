@@ -896,7 +896,7 @@ uvicorn==0.24.0
 pydantic==2.4.2
 sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
-paho-mqtt==2.2.1
+paho-mqtt==1.6.1  # Ältere, stabilere Version für bessere Kompatibilität
 python-dotenv==1.0.0
 requests==2.31.0
 python-multipart==0.0.6

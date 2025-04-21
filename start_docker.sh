@@ -110,6 +110,7 @@ else
     echo -e "MQTT Broker läuft auf Port: $(grep "MQTT_PORT" .env | cut -d= -f2 || echo "1883")"
     echo -e "MQTT WebSockets laufen auf Port: $(grep "MQTT_WS_PORT" .env | cut -d= -f2 || echo "9001")"
     echo -e "ExApp läuft auf: http://localhost:$(grep "EXAPP_PORT" .env | cut -d= -f2 || echo "8080")"
+    echo -e "ExApp-Daemon läuft auf: http://localhost:$(grep "EXAPP_DAEMON_PORT" .env | cut -d= -f2 || echo "8081")"
     echo -e "Postgres DB ist auf Port: $(grep "DB_PORT" .env | cut -d= -f2 || echo "5432") verfügbar"
     echo -e "${BLUE}===============================================${NC}"
     echo -e "Logs anzeigen mit: docker-compose logs -f"

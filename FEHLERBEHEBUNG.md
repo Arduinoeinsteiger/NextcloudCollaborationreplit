@@ -2,6 +2,39 @@
 
 Diese Anleitung hilft bei der Behebung häufiger Probleme mit dem SwissAirDry-System.
 
+## Sicherheitspatches
+
+### Bekannte Sicherheitslücken (April 2025)
+
+**Problem:** Mehrere Sicherheitslücken wurden in Abhängigkeiten gefunden, darunter:
+- **python-jose**: Algorithmus-Verwechslung mit OpenSSH ECDSA-Schlüsseln (Kritisch)
+- **Pillow**: Möglichkeit zur beliebigen Codeausführung (Kritisch)
+- **Gunicorn**: HTTP Request/Response Smuggling (Hoch)
+- **Flask-CORS**: Sicherheitsprobleme mit CORS-Headern (Hoch)
+- **python-multipart**: Denial of Service (DoS) durch fehlerhafte Multipart-Grenzen (Hoch)
+- **Jinja2**: Sandbox-Breakout-Schwachstellen (Mittel)
+
+**Lösung:**
+
+1. **Automatisches Update mit security_update.sh**
+   ```bash
+   ./security_update.sh
+   ```
+   Dieses Skript aktualisiert alle requirements-Dateien auf sichere Versionen.
+
+2. **Bilder neu bauen**
+   ```bash
+   ./build_and_publish_images.sh
+   ```
+   Dadurch werden die Docker-Images mit den aktualisierten Abhängigkeiten neu gebaut und veröffentlicht.
+
+3. **Neustart mit aktualisierten Images**
+   ```bash
+   ./stop_docker.sh
+   ./start_docker.sh
+   ```
+   Beim Start des Stacks können Sie wählen, ob Sie die aktuellen Registry-Images oder lokale Builds verwenden möchten.
+
 ## API-Probleme
 
 ### API startet nicht

@@ -200,3 +200,4 @@ volumes:
   api-logs:
   simple-api-logs:
   exapp-logs:
+  exapp-daemon-logs:

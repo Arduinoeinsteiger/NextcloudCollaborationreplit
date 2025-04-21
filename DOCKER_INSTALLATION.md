@@ -68,7 +68,8 @@ Der SwissAirDry-Stack besteht aus folgenden Komponenten:
 | Simple API   | 5001          | Vereinfachte API basierend auf Flask             |
 | MQTT-Broker  | 1883          | MQTT-Broker für IoT-Kommunikation                |
 | MQTT-WebSockets | 9001       | WebSocket-Schnittstelle für MQTT                 |
-| ExApp        | 8080          | Nextcloud-Integration                            |
+| ExApp        | 8080          | Nextcloud-Integration (Web-Interface)            |
+| ExApp-Daemon | 8081          | Brücke zwischen Nextcloud und SwissAirDry API    |
 | PostgreSQL   | 5432          | Datenbank                                        |
 
 ## Sicherheit
@@ -109,7 +110,7 @@ Die Konfiguration erfolgt zentral über die `.env`-Datei. Änderungen an der Kon
 - API und Simple API lesen die Umgebungsvariablen direkt aus der `.env`-Datei
 - Der MQTT-Broker wird über den `mqtt-config`-Container konfiguriert, der die `mosquitto.conf` basierend auf den Umgebungsvariablen generiert
 - Die Datenbank verwendet die entsprechenden Umgebungsvariablen für die Konfiguration
-- Die ExApp-Komponente wird über die Umgebungsvariablen konfiguriert
+- Die ExApp-Komponenten (Web-Interface und Daemon) werden über die Umgebungsvariablen konfiguriert
 
 Diese zentrale Konfiguration stellt sicher, dass alle Komponenten konsistent konfiguriert sind und vermeidet Fehler durch inkonsistente Einstellungen.
 
@@ -129,6 +130,7 @@ Typische Container-Namen sind:
 - `swissairdry-mqtt`
 - `swissairdry-db`
 - `swissairdry-exapp`
+- `swissairdry-exapp-daemon`
 - `swissairdry-mqtt-config`
 
 ### Netzwerkprobleme

@@ -47,6 +47,7 @@ services:
   
   # Main API (FastAPI)
   api:
+    image: ${REGISTRY_URL:-ghcr.io/arduinoeinsteiger}/swissairdry-api:${IMAGE_TAG:-latest}
     build:
       context: ./api
       dockerfile: Dockerfile.api
@@ -79,6 +80,7 @@ services:
   
   # Simple API (Flask)
   simple-api:
+    image: ${REGISTRY_URL:-ghcr.io/arduinoeinsteiger}/swissairdry-simple-api:${IMAGE_TAG:-latest}
     build:
       context: ./api
       dockerfile: Dockerfile.simple
@@ -109,6 +111,7 @@ services:
 
   # ExApp (Nextcloud App, optional)
   exapp:
+    image: ${REGISTRY_URL:-ghcr.io/arduinoeinsteiger}/swissairdry-exapp:${IMAGE_TAG:-latest}
     build:
       context: ./nextcloud
       dockerfile: Dockerfile.exapp
@@ -134,6 +137,7 @@ services:
         
   # ExApp Daemon (Brücke zwischen Nextcloud und SwissAirDry API)
   exapp-daemon:
+    image: ${REGISTRY_URL:-ghcr.io/arduinoeinsteiger}/swissairdry-exapp-daemon:${IMAGE_TAG:-latest}
     build:
       context: ./nextcloud
       dockerfile: Dockerfile.daemon
@@ -175,6 +179,7 @@ services:
 
   # Update-Tool für MQTT-Konfiguration
   mqtt-config:
+    image: ${REGISTRY_URL:-ghcr.io/arduinoeinsteiger}/swissairdry-mqtt-config:${IMAGE_TAG:-latest}
     build:
       context: ./mqtt-config
       dockerfile: Dockerfile

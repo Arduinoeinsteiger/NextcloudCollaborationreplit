@@ -86,9 +86,17 @@ EOL
     echo -e "${GREEN}mosquitto.conf erstellt.${NC}"
 fi
 
-# Starte Docker Compose
-echo -e "${BLUE}Starte Docker Compose Stack...${NC}"
-docker-compose up -d
+# Frage, ob nur Images aus der Registry verwendet werden sollen
+read -p "Möchten Sie nur vorgefertigte Docker-Images verwenden und nicht lokal bauen? [y/N] " use_registry_only
+if [ "$use_registry_only" = "y" ] || [ "$use_registry_only" = "Y" ]; then
+    # Starte Docker Compose ohne Build
+    echo -e "${BLUE}Starte Docker Compose Stack mit vorgefertigten Images...${NC}"
+    docker-compose up -d --no-build
+else
+    # Starte Docker Compose mit lokalem Build
+    echo -e "${BLUE}Starte Docker Compose Stack mit lokalem Build...${NC}"
+    docker-compose up -d
+fi
 
 # Prüfe, ob alle Container laufen
 echo -e "${BLUE}Prüfe Container-Status...${NC}"

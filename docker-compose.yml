@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Datenbank
+  db:
+    image: postgres:14-alpine
+    container_name: swissairdry-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-swissairdry}
+      POSTGRES_DB: ${DB_NAME:-swissairdry}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - swissairdry-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+  # MQTT Broker
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: swissairdry-mqtt
+    restart: unless-stopped
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WS_PORT:-9001}:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mqtt-data:/mosquitto/data
+      - mqtt-log:/mosquitto/log
+    networks:
+      - swissairdry-network
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  # Main API (FastAPI)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.api
+    container_name: swissairdry-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-5000}:5000"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=5000
+      - API_DEBUG=${API_DEBUG:-true}
+      - API_RELOAD=${API_RELOAD:-true}
+      - API_WORKERS=${API_WORKERS:-1}
+      - DB_ENGINE=${DB_ENGINE:-postgresql}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-swissairdry}
+      - DB_NAME=${DB_NAME:-swissairdry}
+      - MQTT_BROKER=mqtt
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_CLIENT_ID=${MQTT_CLIENT_ID:-swissairdry-api}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - MQTT_USE_SSL=${MQTT_USE_SSL:-false}
+      - MQTT_QOS=${MQTT_QOS:-1}
+      - MQTT_RETAIN=${MQTT_RETAIN:-true}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-swissairdry}
+    volumes:
+      - ./api:/app
+      - api-logs:/app/logs
+    networks:
+      - swissairdry-network
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  # Simple API (Flask)
+  simple-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.simple
+    container_name: swissairdry-simple-api
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=5001
+      - API_DEBUG=${API_DEBUG:-true}
+      - MQTT_BROKER=mqtt
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_CLIENT_ID=${MQTT_SIMPLE_CLIENT_ID:-swissairdry-simple-api}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - MQTT_USE_SSL=${MQTT_USE_SSL:-false}
+      - MQTT_QOS=${MQTT_QOS:-1}
+      - MQTT_RETAIN=${MQTT_RETAIN:-true}
+      - MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-swissairdry}
+    volumes:
+      - ./api:/app
+      - simple-api-logs:/app/logs
+    networks:
+      - swissairdry-network
+    depends_on:
+      mqtt:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ExApp (Nextcloud App, optional)
+  exapp:
+    build:
+      context: ./nextcloud
+      dockerfile: Dockerfile.exapp
+    container_name: swissairdry-exapp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - API_URL=http://api:5000
+      - SIMPLE_API_URL=http://simple-api:5001
+      - NEXTCLOUD_URL=${NEXTCLOUD_URL:-https://nextcloud.example.com}
+      - EXAPP_PORT=${EXAPP_PORT:-8080}
+    volumes:
+      - ./nextcloud:/app
+      - exapp-logs:/app/logs
+    networks:
+      - swissairdry-network
+    depends_on:
+      api:
+        condition: service_healthy
+      simple-api:
+        condition: service_healthy
+
+networks:
+  swissairdry-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  mqtt-data:
+  mqtt-log:
+  api-logs:
+  simple-api-logs:
+  exapp-logs:

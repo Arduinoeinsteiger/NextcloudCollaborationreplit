@@ -8,6 +8,9 @@
  * @copyright 2023-2025 Swiss Air Dry Team
  */
 
+// Diese Datei VOR allen anderen Includes einfügen, um SPI-Kompatibilitätsprobleme zu beheben
+#include "spi_fix.h"
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>

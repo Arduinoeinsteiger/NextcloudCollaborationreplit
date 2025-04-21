@@ -1,394 +1,223 @@
 # SwissAirDry Fehlerbehebungsanleitung
 
-Diese Anleitung hilft Ihnen bei der Behebung häufiger Probleme mit dem SwissAirDry-System.
-
-## Inhaltsverzeichnis
-
-1. [Docker-bezogene Probleme](#docker-bezogene-probleme)
-2. [Netzwerkprobleme](#netzwerkprobleme)
-3. [SSL-/TLS-Probleme](#ssl-tls-probleme)
-4. [Nextcloud-Probleme](#nextcloud-probleme)
-5. [API-Probleme](#api-probleme)
-6. [MQTT-Probleme](#mqtt-probleme)
-7. [Datenbank-Probleme](#datenbank-probleme)
-8. [Häufige Fehlercodes](#häufige-fehlercodes)
-
----
-
-## Docker-bezogene Probleme
-
-### Container startet nicht
-
-**Symptom**: Ein oder mehrere Container starten nicht.
-
-**Lösungsansätze**:
-
-1. Logs des betroffenen Containers prüfen:
-   ```bash
-   docker-compose logs [service-name]
-   ```
-
-2. Container neustarten:
-   ```bash
-   docker-compose restart [service-name]
-   ```
-
-3. Container mit neuen Images neu erstellen:
-   ```bash
-   docker-compose pull [service-name]
-   docker-compose up -d --force-recreate [service-name]
-   ```
-
-### Unzureichender Speicherplatz
-
-**Symptom**: Docker Container können nicht erstellt werden oder stürzen ab.
-
-**Lösungsansätze**:
-
-1. Speicherplatz überprüfen:
-   ```bash
-   df -h
-   ```
-
-2. Ungenutzten Docker-Ressourcen bereinigen:
-   ```bash
-   docker system prune -a
-   ```
-
-3. Laufende Container und deren Größe anzeigen:
-   ```bash
-   docker ps -s
-   ```
-
----
-
-## Netzwerkprobleme
-
-### Dienste sind nicht erreichbar
-
-**Symptom**: Weboberfläche oder API ist nicht erreichbar.
-
-**Lösungsansätze**:
-
-1. Prüfen, ob die Dienste laufen:
-   ```bash
-   docker-compose ps
-   ```
-
-2. Netzwerkkonfiguration überprüfen:
-   ```bash
-   docker network inspect swissairdry_network
-   ```
-
-3. Ports auf dem Host prüfen:
-   ```bash
-   netstat -tulpn | grep -E '80|443|1883|8883|5432'
-   ```
-
-4. Firewall-Einstellungen überprüfen und ggf. Ports freigeben:
-   ```bash
-   sudo ufw status
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
-   ```
-
----
-
-## SSL-/TLS-Probleme
-
-### Zertifikatsfehler
-
-**Symptom**: Browser zeigt SSL-Fehler oder Dienste können nicht verschlüsselt kommunizieren.
-
-**Lösungsansätze**:
-
-1. Zertifikatsdateien überprüfen:
-   ```bash
-   ls -la /opt/swissairdry/nginx/ssl/
-   ```
-
-2. Überprüfen, ob die Zertifikate gültig sind:
-   ```bash
-   openssl x509 -in /opt/swissairdry/nginx/ssl/fullchain.pem -text -noout
-   ```
-
-3. Zertifikate erneuern (bei Let's Encrypt):
-   ```bash
-   certbot renew
-   ```
-
-4. Bei selbstsignierten Zertifikaten: Neue Zertifikate generieren und Container neustarten:
-   ```bash
-   docker-compose restart nginx mqtt
-   ```
-
----
-
-## Nextcloud-Probleme
-
-### Nextcloud zeigt Wartungsmodus oder Fehler
-
-**Symptom**: Nextcloud ist im Wartungsmodus oder zeigt Fehler an.
-
-**Lösungsansätze**:
-
-1. Nextcloud-Logs überprüfen:
-   ```bash
-   docker-compose logs nextcloud_app
-   ```
-
-2. Datenbank-Verbindung prüfen:
-   ```bash
-   docker-compose exec -T nextcloud_app php occ status
-   ```
-
-3. Wartungsmodus deaktivieren:
-   ```bash
-   docker-compose exec -T nextcloud_app php occ maintenance:mode --off
-   ```
-
-4. Nextcloud-Berechtigungen reparieren:
-   ```bash
-   docker-compose exec -T nextcloud_app chown -R www-data:www-data /var/www/html
-   ```
-
-5. Nextcloud aktualisieren:
-   ```bash
-   docker-compose exec -T nextcloud_app php occ upgrade
-   ```
-
-### Externe App funktioniert nicht
-
-**Symptom**: Die SwissAirDry-App erscheint nicht in Nextcloud oder funktioniert nicht korrekt.
-
-**Lösungsansätze**:
-
-1. Prüfen, ob die App installiert ist:
-   ```bash
-   docker-compose exec -T nextcloud_app php occ app:list | grep external
-   ```
-
-2. App neu installieren:
-   ```bash
-   docker-compose exec -T nextcloud_app php occ app:install external
-   docker-compose exec -T nextcloud_app php occ app:enable external
-   ```
-
-3. Berechtigungen überprüfen:
-   ```bash
-   docker-compose exec -T nextcloud_app php occ app:update external
-   ```
-
----
+Diese Anleitung hilft bei der Behebung häufiger Probleme mit dem SwissAirDry-System.
 
 ## API-Probleme
 
-### API gibt Fehler zurück
+### API startet nicht
 
-**Symptom**: API-Anfragen schlagen fehl oder liefern unerwartete Ergebnisse.
+**Symptom:** Die API startet nicht oder ist nicht erreichbar.
 
-**Lösungsansätze**:
+**Mögliche Ursachen und Lösungen:**
 
-1. API-Logs überprüfen:
-   ```bash
-   docker-compose logs api
-   ```
+1. **Port ist bereits belegt**
+   - Prüfen Sie, ob der konfigurierte Port (Standard: 5000) bereits verwendet wird:
+     ```bash
+     sudo lsof -i :5000
+     ```
+   - Beenden Sie den blockierenden Prozess oder ändern Sie den API-Port in der `.env`-Datei.
 
-2. API-Container neustarten:
-   ```bash
-   docker-compose restart api
-   ```
+2. **Python-Abhängigkeiten fehlen**
+   - Installieren Sie die erforderlichen Pakete manuell:
+     ```bash
+     pip install fastapi uvicorn sqlalchemy pydantic psycopg2-binary python-dotenv paho-mqtt
+     ```
 
-3. API-Verbindung zur Datenbank prüfen:
-   ```bash
-   docker-compose exec api python -c "import psycopg2; conn = psycopg2.connect('host=postgres dbname=swissairdry user=swissairdry password=PASSWORD_AUS_ENV_DATEI'); print('Verbindung OK')"
-   ```
-   (Ersetzen Sie PASSWORD_AUS_ENV_DATEI durch das tatsächliche Passwort)
+3. **Berechtigungsprobleme**
+   - Stellen Sie sicher, dass Sie die erforderlichen Berechtigungen haben:
+     ```bash
+     chmod +x ~/swissairdry/start_api.sh
+     chmod -R 755 ~/swissairdry/api
+     ```
 
-4. Prüfen, ob die API erreichbar ist:
-   ```bash
-   curl -k https://api.ihre-domain.de/health
-   ```
+4. **Fehlerhafte Konfiguration**
+   - Überprüfen Sie die Konfiguration in der `.env`-Datei.
 
----
+### API-Fehler
+
+**Symptom:** Die API gibt Fehler zurück oder funktioniert nicht wie erwartet.
+
+**Lösungen:**
+
+1. **Logdateien prüfen**
+   - Sehen Sie sich die API-Logs an:
+     ```bash
+     tail -f ~/swissairdry/logs/api.log
+     ```
+
+2. **Neustart der API**
+   - Stoppen und starten Sie die API:
+     ```bash
+     ~/swissairdry/stop_api.sh
+     ~/swissairdry/start_api.sh
+     ```
 
 ## MQTT-Probleme
 
+### MQTT-Broker startet nicht
+
+**Symptom:** Der MQTT-Broker startet nicht oder ist nicht erreichbar.
+
+**Mögliche Ursachen und Lösungen:**
+
+1. **Mosquitto ist nicht installiert**
+   - Installieren Sie Mosquitto manuell:
+     ```bash
+     sudo apt-get update && sudo apt-get install -y mosquitto mosquitto-clients
+     ```
+
+2. **Port ist bereits belegt**
+   - Prüfen Sie, ob der konfigurierte Port (Standard: 1883) bereits verwendet wird:
+     ```bash
+     sudo lsof -i :1883
+     ```
+   - Beenden Sie den blockierenden Prozess oder ändern Sie den MQTT-Port in der `.env`-Datei.
+
+3. **Berechtigungsprobleme**
+   - Stellen Sie sicher, dass Sie die erforderlichen Berechtigungen haben:
+     ```bash
+     chmod +x ~/swissairdry/start_mqtt.sh
+     chmod -R 755 ~/swissairdry/mqtt
+     ```
+
+4. **Fehlerhafte Konfiguration**
+   - Überprüfen Sie die Konfiguration in `~/swissairdry/mqtt/config/mosquitto.conf`.
+
 ### MQTT-Verbindungsprobleme
 
-**Symptom**: Geräte können keine Verbindung zum MQTT-Broker herstellen oder MQTT-Container startet ständig neu.
+**Symptom:** Clients können keine Verbindung zum MQTT-Broker herstellen.
 
-**Lösungsansätze**:
+**Lösungen:**
 
-1. MQTT-Logs prüfen:
-   ```bash
-   docker-compose logs mqtt
-   ```
+1. **Logdateien prüfen**
+   - Sehen Sie sich die MQTT-Logs an:
+     ```bash
+     tail -f ~/swissairdry/mqtt/log/mosquitto.log
+     ```
 
-2. MQTT-Konfiguration überprüfen:
-   ```bash
-   cat /opt/swissairdry/mqtt/config/mosquitto.conf
-   ```
+2. **Prüfen Sie die Authentifizierung**
+   - Wenn Sie die Authentifizierung aktiviert haben (`MQTT_AUTH_ENABLED=true`), stellen Sie sicher, dass Benutzername und Passwort korrekt sind.
+   - Wenn Sie anonyme Verbindungen zulassen möchten, setzen Sie `MQTT_ALLOW_ANONYMOUS=true`.
 
-3. Prüfen, ob der MQTT-Broker läuft und Ports geöffnet sind:
-   ```bash
-   docker-compose ps mqtt
-   netstat -tulpn | grep -E '1883|8883'
-   ```
+3. **Neustart des MQTT-Brokers**
+   - Stoppen und starten Sie den MQTT-Broker:
+     ```bash
+     ~/swissairdry/stop_mqtt.sh
+     ~/swissairdry/start_mqtt.sh
+     ```
 
-4. **Problem mit SSL-Zertifikaten für MQTT beheben**:
-   
-   Wenn in den Logs Fehler zu "Permission denied" oder Problemen mit den SSL-Zertifikaten erscheinen:
-   ```bash
-   # Zertifikats-Berechtigungsproblem beheben
-   sudo chmod -R 755 /opt/swissairdry/nginx/ssl
-   sudo chown -R 1883:1883 /opt/swissairdry/nginx/ssl
-   sudo chmod 600 /opt/swissairdry/nginx/ssl/privkey.pem
-   
-   # Oder alternativ in docker-compose.yml das :ro Flag entfernen
-   # - /opt/swissairdry/nginx/ssl:/mosquitto/certs:ro → - /opt/swissairdry/nginx/ssl:/mosquitto/certs
-   ```
+4. **Überprüfen Sie die Netzwerkverbindung**
+   - Testen Sie die Verbindung zum MQTT-Broker:
+     ```bash
+     mosquitto_pub -h localhost -p 1883 -t test -m "Hallo Welt"
+     ```
 
-5. Bei anhaltenden SSL-Problemen die SSL-Konfiguration temporär deaktivieren:
-   ```bash
-   # In /opt/swissairdry/mqtt/config/mosquitto.conf die SSL-Listener-Zeilen auskommentieren:
-   # listener 8883
-   # certfile /mosquitto/certs/fullchain.pem
-   # keyfile /mosquitto/certs/privkey.pem
-   # require_certificate false
-   ```
+## ESP-Firmware-Probleme
 
-6. MQTT-Broker neustarten mit korrektem User:
-   ```bash
-   # In docker-compose.yml den user-Parameter ergänzen (falls fehlend)
-   # user: "1883"  # Unter dem volumes-Bereich
-   
-   # Dann neu starten
-   docker-compose restart mqtt
-   ```
+### Kompilierungsfehler
 
-7. MQTT-Verbindung mit einem Test-Client prüfen:
-   ```bash
-   docker run --rm -it eclipse-mosquitto mosquitto_pub -h ihre-domain.de -p 1883 -t test -m "hello"
-   ```
+**Symptom:** Die Firmware kann nicht kompiliert werden.
 
----
+**Mögliche Ursachen und Lösungen:**
 
-## Datenbank-Probleme
+1. **PlatformIO ist nicht installiert**
+   - Installieren Sie PlatformIO manuell:
+     ```bash
+     pip install -U platformio
+     ```
 
-### PostgreSQL-Datenbankprobleme
+2. **Abhängigkeiten fehlen**
+   - Führen Sie eine Aktualisierung der PlatformIO-Abhängigkeiten durch:
+     ```bash
+     cd ~/swissairdry/firmware
+     platformio pkg update
+     ```
 
-**Symptom**: API kann nicht auf die Datenbank zugreifen oder Datenbankfehler werden angezeigt.
+3. **Fehlerhafter Code**
+   - Überprüfen Sie die Fehlermeldungen und korrigieren Sie den Code entsprechend.
 
-**Lösungsansätze**:
+4. **SPI-Typ-Definitionen (ESP32-C6)**
+   - Bei Problemen mit `spi_host_device_t` in ESP32-C6, stellen Sie sicher, dass die `spi_fix.h` korrekt eingebunden ist.
 
-1. Datenbank-Logs prüfen:
-   ```bash
-   docker-compose logs postgres
-   ```
+### Upload-Probleme
 
-2. Datenbank-Status prüfen:
-   ```bash
-   docker-compose exec postgres pg_isready
-   ```
+**Symptom:** Die Firmware kann nicht auf das Gerät hochgeladen werden.
 
-3. Verbindung zur Datenbank testen:
-   ```bash
-   docker-compose exec postgres psql -U swissairdry -d swissairdry -c "SELECT 1"
-   ```
+**Lösungen:**
 
-4. Datenbank-Container neustarten:
-   ```bash
-   docker-compose restart postgres
-   ```
+1. **Überprüfen Sie die Verbindung**
+   - Stellen Sie sicher, dass das Gerät korrekt angeschlossen ist und der richtige Port angegeben wurde.
+   - Versuchen Sie, den Port manuell anzugeben:
+     ```bash
+     ~/swissairdry/firmware/upload_esp8266.sh /dev/ttyUSB0
+     ```
 
-### MariaDB/MySQL-Datenbankprobleme (Nextcloud)
+2. **Setzen Sie das Gerät in den Flash-Modus**
+   - Drücken Sie die BOOT- oder FLASH-Taste während des Uploads.
 
-**Symptom**: Nextcloud kann nicht auf die Datenbank zugreifen.
+3. **Berechtigungsprobleme**
+   - Stellen Sie sicher, dass Sie Zugriff auf den seriellen Port haben:
+     ```bash
+     sudo chmod 666 /dev/ttyUSB0
+     ```
+   - Fügen Sie Ihren Benutzer zur Gruppe `dialout` hinzu:
+     ```bash
+     sudo usermod -a -G dialout $USER
+     ```
+     (Anmeldung erforderlich, damit die Änderung wirksam wird)
 
-**Lösungsansätze**:
+## Allgemeine Probleme
 
-1. Datenbank-Logs prüfen:
-   ```bash
-   docker-compose logs db
-   ```
+### Dienste starten nach Neustart nicht automatisch
 
-2. Verbindung zur Datenbank testen:
-   ```bash
-   docker-compose exec db mysql -u nextcloud -p -e "SHOW DATABASES"
-   ```
-   (Geben Sie das Passwort ein, wenn Sie dazu aufgefordert werden)
+**Problem:** Die Dienste starten nach einem Systemneustart nicht automatisch.
 
-3. Datenbank-Container neustarten:
-   ```bash
-   docker-compose restart db
-   ```
+**Lösung:**
 
----
+Erstellen Sie systemd-Service-Dateien oder crontab-Einträge, um die Dienste automatisch zu starten:
 
-## Häufige Fehlercodes
+**Beispiel für crontab:**
 
-### HTTP-Statuscodes
+```bash
+crontab -e
+```
 
-- **404 Not Found**: Ressource konnte nicht gefunden werden
-  - Prüfen Sie die URL und die Konfiguration des Reverse Proxy
+Fügen Sie die folgenden Zeilen hinzu:
 
-- **502 Bad Gateway**: Nginx kann nicht mit dem Backend kommunizieren
-  - Prüfen Sie, ob der API-Container läuft
-  - Prüfen Sie die Netzwerkkonfiguration
+```
+@reboot ~/swissairdry/start_api.sh
+@reboot ~/swissairdry/start_mqtt.sh
+```
 
-- **503 Service Unavailable**: Dienst ist temporär nicht verfügbar
-  - Prüfen Sie den Status des entsprechenden Containers
+### Datenbank-Probleme
 
-### Nextcloud-Fehlermeldungen
+**Symptom:** Datenbankfehler in den API-Logs.
 
-- **CSRF check failed**: Sitzungsproblem
-  - Browser-Cache leeren und erneut anmelden
+**Lösungen:**
 
-- **No database drivers (PDO) installed**: Datenbanktreiber fehlt
-  - Prüfen Sie die Nextcloud-Installation
+1. **Überprüfen Sie die Datenbankverbindung**
+   - Stellen Sie sicher, dass die Datenbank läuft und erreichbar ist.
+   - Überprüfen Sie die Datenbankverbindungsdaten in der `.env`-Datei.
 
-### SwissAirDry API-Fehlercodes
+2. **Datenbankschema aktualisieren**
+   - Führen Sie die Datenbankmigrationen manuell aus.
 
-- **401 Unauthorized**: Authentifizierungsproblem
-  - Prüfen Sie den API-Token oder die Anmeldedaten
+### Speicherprobleme
 
-- **403 Forbidden**: Keine Berechtigung
-  - Prüfen Sie die Benutzerrechte
+**Symptom:** Die ESP-Geräte stürzen ab oder starten neu.
 
-- **500 Internal Server Error**: Serverfehler
-  - Prüfen Sie die API-Logs für detaillierte Fehlermeldungen
+**Lösungen:**
 
----
+1. **Stacktrace überprüfen**
+   - Verwenden Sie den seriellen Monitor, um die Fehlermeldungen zu sehen:
+     ```bash
+     ~/swissairdry/firmware/monitor.sh
+     ```
 
-## Wiederherstellung nach Datenverlust
+2. **Speichernutzung optimieren**
+   - Reduzieren Sie große statische Datenstrukturen oder Puffer.
+   - Verwenden Sie dynamische Speicherverwaltung mit Bedacht.
 
-### Backup-Wiederherstellung
+## Kontakt und Support
 
-**Schritt-für-Schritt-Anleitung**:
-
-1. Nextcloud-Datenbank wiederherstellen:
-   ```bash
-   docker-compose exec -T db mysql -u root -p nextcloud < nextcloud_backup.sql
-   ```
-
-2. Nextcloud-Dateien wiederherstellen (falls Sie ein Backup haben):
-   ```bash
-   # Beispiel mit rsync
-   rsync -av /path/to/backup/nextcloud/ /opt/swissairdry/nextcloud/nextcloud_data/
-   ```
-
-3. SwissAirDry-Datenbank wiederherstellen:
-   ```bash
-   docker-compose exec -T postgres psql -U swissairdry -d swissairdry < swissairdry_backup.sql
-   ```
-
-4. Container neustarten:
-   ```bash
-   docker-compose down
-   docker-compose up -d
-   ```
-
-Bei weiteren Fragen oder Problemen wenden Sie sich bitte an den Support:
-- E-Mail: support@swissairdry.com
-- Webseite: https://swissairdry.com/support
+Bei anhaltenden Problemen oder speziellen Fragen wenden Sie sich bitte an das SwissAirDry-Team.

@@ -131,6 +131,47 @@ services:
         condition: service_healthy
       simple-api:
         condition: service_healthy
+        
+  # ExApp Daemon (Brücke zwischen Nextcloud und SwissAirDry API)
+  exapp-daemon:
+    build:
+      context: ./nextcloud
+      dockerfile: Dockerfile.daemon
+    container_name: swissairdry-exapp-daemon
+    restart: unless-stopped
+    ports:
+      - "${EXAPP_DAEMON_PORT:-8081}:8081"
+    env_file:
+      - .env
+    environment:
+      - APP_ID=swissairdry
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8081
+      - APP_SECRET=${EXAPP_SECRET_KEY:-changeme_in_production}
+      - NEXTCLOUD_URL=${NEXTCLOUD_URL:-https://nextcloud.example.com}
+      - API_URL=http://api:${API_PORT:-5000}
+      - SIMPLE_API_URL=http://simple-api:${SIMPLE_API_PORT:-5001}
+      - MQTT_BROKER=mqtt
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_WS_PORT=${MQTT_WS_PORT:-9001}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - DB_HOST=db
+    volumes:
+      - ./nextcloud:/app
+      - exapp-daemon-logs:/app/logs
+    networks:
+      - swissairdry-network
+    depends_on:
+      - mqtt
+      - api
+      - simple-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Update-Tool für MQTT-Konfiguration
   mqtt-config:

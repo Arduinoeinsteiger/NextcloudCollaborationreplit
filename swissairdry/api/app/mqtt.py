@@ -46,8 +46,9 @@ class MQTTClient:
         import uuid
         # Längere Client-ID mit Zeitstempel für bessere Eindeutigkeit
         client_id = f"swissairdry-api-{uuid.uuid4().hex[:8]}-{int(time.time())}"
-        # clean_session auf False setzen für stabilere Verbindungen
-        self.client = mqtt.Client(client_id=client_id, clean_session=False)
+        # clean_session auf True setzen, um alte Sessions zu vermeiden
+        # Dies ist wichtig, um Probleme bei der Wiederverbindung zu vermeiden
+        self.client = mqtt.Client(client_id=client_id, clean_session=True)
         self.is_connected_flag = False
         
         # Verbindungsstabilität optimieren
@@ -279,13 +280,27 @@ class MQTTClient:
             userdata: Benutzerdaten
             rc: Trennungsergebnis
         """
+        prev_state = self.is_connected_flag
         self.is_connected_flag = False
+        
         if rc != 0:
-            logger.warning(f"Unerwartete MQTT-Trennung mit Code {rc}")
-            # Bei unerwarteter Trennung versucht der Client automatisch,
-            # sich wieder zu verbinden, da wir reconnect_delay_set verwenden
+            # Fehlercode-spezifische Behandlung
+            if rc == 7:
+                # Code 7: Nicht autorisiert - möglicherweise ein Problem mit Client-ID oder Berechtigungen
+                logger.warning(f"MQTT-Verbindung nicht autorisiert (Code 7), Client-ID-Konflikt möglich")
+                # In diesem Fall sollte keine automatische Wiederverbindung erfolgen
+                # um zu verhindern, dass weitere Fehler auftreten
+                client.loop_stop()
+                # Starte eine separate asynchrone Wiederverbindung
+                if prev_state:  # Nur wenn vorher verbunden, um Mehrfachaufrufe zu vermeiden
+                    logger.info("Starte asynchrone Wiederverbindung...")
+                    asyncio.get_event_loop().create_task(self._reconnect_background())
+            else:
+                logger.warning(f"Unerwartete MQTT-Trennung mit Code {rc}")
+                # Bei anderen unerwarteten Trennungen versucht der Client automatisch,
+                # sich wieder zu verbinden, da wir reconnect_delay_set verwenden
         else:
-            logger.info("MQTT-Verbindung getrennt")
+            logger.info("MQTT-Verbindung normal getrennt")
     
     def _on_message(self, client, userdata, msg):
         """

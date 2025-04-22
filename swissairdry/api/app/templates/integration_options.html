@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwissAirDry Integration Options</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1, h2, h3 {
+            color: #0066cc;
+        }
+        
+        .header {
+            background-color: #0066cc;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .options-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .option-card {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .option-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .option-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .option-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            background-color: #e6f2ff;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .option-title {
+            margin: 0;
+        }
+        
+        .features-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 15px 0;
+        }
+        
+        .features-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .features-list li:before {
+            content: "✓";
+            color: #4CAF50;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .pros-cons {
+            display: flex;
+            margin-top: 20px;
+            gap: 15px;
+        }
+        
+        .pros, .cons {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .pros {
+            background-color: #e8f5e9;
+        }
+        
+        .cons {
+            background-color: #ffebee;
+        }
+        
+        .pros h4, .cons h4 {
+            margin-top: 0;
+            text-align: center;
+        }
+        
+        .pros ul, .cons ul {
+            padding-left: 20px;
+        }
+        
+        .option-footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .complexity {
+            display: flex;
+            align-items: center;
+        }
+        
+        .complexity-dots {
+            display: flex;
+            margin-left: 10px;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 50%;
+            margin-right: 3px;
+        }
+        
+        .dot.active {
+            background-color: #0066cc;
+        }
+        
+        .recommendation {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #e3f2fd;
+            border-left: 5px solid #0066cc;
+            border-radius: 3px;
+        }
+        
+        .recommendation h3 {
+            margin-top: 0;
+        }
+        
+        .button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+        
+        .button:hover {
+            background-color: #0052a3;
+        }
+
+        .integration-image {
+            width: 100%;
+            height: 180px;
+            background-color: #e6f2ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .integration-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SwissAirDry Integration Optionen</h1>
+        <p>Vergleich verschiedener Integrationsoptionen für SwissAirDry basierend auf Ihren Anforderungen</p>
+    </div>
+
+    <div class="options-container">
+        <!-- Option 1: Deck App -->
+        <div class="option-card">
+            <div class="option-header">
+                <div class="option-icon">📋</div>
+                <h2 class="option-title">Nextcloud Deck</h2>
+            </div>
+
+            <div class="integration-image">
+                <img src="https://nextcloud.com/wp-content/uploads/2021/09/deck-1.png" alt="Nextcloud Deck App">
+            </div>
+
+            <p>Nextcloud Deck bietet ein Kanban-ähnliches Board-System für einfaches Aufgaben- und Projektmanagement.</p>
+            
+            <ul class="features-list">
+                <li>Einfache Aufgabenverwaltung mit Boards und Listen</li>
+                <li>Integriert in Nextcloud-Umgebung</li>
+                <li>Zuweisung von Aufgaben an Benutzer</li>
+                <li>Fälligkeitsdaten und Etiketten</li>
+                <li>Kommentare und Aktivitätsverfolgung</li>
+            </ul>
+            
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Vorteile</h4>
+                    <ul>
+                        <li>Einfache Implementierung</li>
+                        <li>Bereits in Nextcloud vorhanden</li>
+                        <li>Bekannte Benutzeroberfläche</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Nachteile</h4>
+                    <ul>
+                        <li>Eingeschränkte IoT-Visualisierung</li>
+                        <li>Begrenzte Anpassungsmöglichkeiten</li>
+                        <li>Fehlen von benutzerdefinierten Feldern</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="option-footer">
+                <div class="complexity">
+                    Komplexität:
+                    <div class="complexity-dots">
+                        <div class="dot active"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+                <a href="#" class="button">Details</a>
+            </div>
+        </div>
+
+        <!-- Option 2: Custom ExApp -->
+        <div class="option-card">
+            <div class="option-header">
+                <div class="option-icon">🛠️</div>
+                <h2 class="option-title">Custom ExApp</h2>
+            </div>
+
+            <div class="integration-image">
+                <img src="https://nextcloud.com/wp-content/uploads/2022/09/apps-1.png" alt="Nextcloud ExApp">
+            </div>
+
+            <p>Eine maßgeschneiderte externe Anwendung (ExApp) für Nextcloud mit vollständiger Anpassung an SwissAirDry-Anforderungen.</p>
+            
+            <ul class="features-list">
+                <li>Vollständig anpassbare Benutzeroberfläche</li>
+                <li>Spezialisierte IoT-Visualisierungen</li>
+                <li>Detaillierte Sensordaten-Dashboards</li>
+                <li>Umfassende Geräteüberwachung</li>
+                <li>Integration mit anderen Nextcloud-Apps</li>
+            </ul>
+            
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Vorteile</h4>
+                    <ul>
+                        <li>Vollständige Anpassbarkeit</li>
+                        <li>Beste Benutzererfahrung</li>
+                        <li>Erweiterte Datenvisualisierung</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Nachteile</h4>
+                    <ul>
+                        <li>Höhere Entwicklungskomplexität</li>
+                        <li>Längere Entwicklungszeit</li>
+                        <li>Wartungsaufwand</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="option-footer">
+                <div class="complexity">
+                    Komplexität:
+                    <div class="complexity-dots">
+                        <div class="dot active"></div>
+                        <div class="dot active"></div>
+                        <div class="dot active"></div>
+                        <div class="dot active"></div>
+                    </div>
+                </div>
+                <a href="#" class="button">Details</a>
+            </div>
+        </div>
+
+        <!-- Option 3: Forms + Talk + Files -->
+        <div class="option-card">
+            <div class="option-header">
+                <div class="option-icon">🔄</div>
+                <h2 class="option-title">Forms + Talk + Files</h2>
+            </div>
+
+            <div class="integration-image">
+                <img src="https://nextcloud.com/wp-content/uploads/2021/03/Nextcloud-Forms_featured.png" alt="Nextcloud Forms">
+            </div>
+
+            <p>Kombination aus vorhandenen Nextcloud-Apps, insbesondere Forms für Auftragserfassung, Talk für Kommunikation und Files für Dokumentenmanagement.</p>
+            
+            <ul class="features-list">
+                <li>Formulare für Geräte- und Auftragsdaten</li>
+                <li>Dokumente und Berichte in Files</li>
+                <li>Echtzeit-Kommunikation über Talk</li>
+                <li>Kalender für Einsatzplanung</li>
+                <li>Flexible Anpassung durch App-Kombination</li>
+            </ul>
+            
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Vorteile</h4>
+                    <ul>
+                        <li>Nutzung vorhandener Apps</li>
+                        <li>Mittlere Komplexität</li>
+                        <li>Umfassende Dokumentation</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Nachteile</h4>
+                    <ul>
+                        <li>Getrennte Benutzeroberflächen</li>
+                        <li>Keine spezielle IoT-Visualisierung</li>
+                        <li>Mehr manuelle Prozesse</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="option-footer">
+                <div class="complexity">
+                    Komplexität:
+                    <div class="complexity-dots">
+                        <div class="dot active"></div>
+                        <div class="dot active"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+                <a href="#" class="button">Details</a>
+            </div>
+        </div>
+
+        <!-- Option 4: Standalone SwissAirDry Dashboard -->
+        <div class="option-card">
+            <div class="option-header">
+                <div class="option-icon">📊</div>
+                <h2 class="option-title">Standalone Dashboard</h2>
+            </div>
+
+            <div class="integration-image">
+                <img src="https://www.holonext.com/wp-content/uploads/2023/01/iot-dashboard-1-1.png" alt="IoT Dashboard">
+            </div>
+
+            <p>Ein eigenständiges Dashboard für SwissAirDry mit Echtzeit-Datenvisualisierung und optimierter Benutzererfahrung für IoT-Gerätemanagement.</p>
+            
+            <ul class="features-list">
+                <li>Speziell für IoT-Visualisierung konzipiert</li>
+                <li>Umfassende Echtzeitdaten</li>
+                <li>Geolokalisierung von Geräten</li>
+                <li>Benutzerdefinierte Alarme und Benachrichtigungen</li>
+                <li>Historische Datenanalyse und Berichterstellung</li>
+            </ul>
+            
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4>Vorteile</h4>
+                    <ul>
+                        <li>Optimale IoT-Überwachung</li>
+                        <li>Maßgeschneiderte Benutzeroberfläche</li>
+                        <li>Volle Kontrolle über Funktionalität</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h4>Nachteile</h4>
+                    <ul>
+                        <li>Getrennt von Nextcloud</li>
+                        <li>Separate Anmeldung erforderlich</li>
+                        <li>Zusätzliche Infrastruktur</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="option-footer">
+                <div class="complexity">
+                    Komplexität:
+                    <div class="complexity-dots">
+                        <div class="dot active"></div>
+                        <div class="dot active"></div>
+                        <div class="dot active"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+                <a href="#" class="button">Details</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="recommendation">
+        <h3>Empfehlung basierend auf Ihren Anforderungen</h3>
+        <p>Nach Analyse Ihrer Anforderungen an Datenvisualisierung, Geräteverwaltung und Auftragsabwicklung empfehlen wir <strong>Option 4: Standalone SwissAirDry Dashboard</strong> mit einer API-Integration in Nextcloud.</p>
+        <p>Diese Lösung bietet:</p>
+        <ul>
+            <li>Optimale IoT-Gerätevisualisierung mit spezialisierten Dashboards</li>
+            <li>Maßgeschneiderte Benutzeroberfläche für Ihre spezifischen Anforderungen</li>
+            <li>Bessere Darstellung der BLE-gestützten Standortverfolgung</li>
+            <li>Tiefere Integration mit MQTT für Echtzeitaktualisierungen</li>
+            <li>Einfache API-Integration mit Nextcloud für Dateiaustausch bei Bedarf</li>
+        </ul>
+        <p>Die Umsetzung kann in Phasen erfolgen, wobei wir mit einem grundlegenden Dashboard beginnen und es schrittweise erweitern können.</p>
+    </div>
+</body>
+</html>

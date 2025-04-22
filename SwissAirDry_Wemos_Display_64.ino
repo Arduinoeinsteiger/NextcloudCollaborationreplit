@@ -141,7 +141,8 @@ enum MenuState {
     SYSTEM_INFO,       // Systeminformationen
     BLE_SCAN,          // BLE-Geräte scannen
     COUNTDOWN_SCREEN,  // Countdown-Anzeige mit Animation
-    RESTART_CONFIRM    // Neustartbestätigung
+    RESTART_CONFIRM,   // Neustartbestätigung
+    SCAN_RESULTS       // Ergebnisse des BLE-Scans anzeigen
 };
 
 // Aktueller Menüzustand
@@ -834,6 +835,98 @@ void updateDisplay() {
       }
       break;
       
+    case BLE_SCAN:
+      // BLE-Scan-Bildschirm
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("BLE Geraetescan");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      
+      if (isScanning) {
+        // Animation während des Scans
+        const uint8_t* frames[] = {sandclock_frame1, sandclock_frame2, sandclock_frame3};
+        display.drawBitmap(48, 15, frames[animationFrame], 32, 32, SSD1306_WHITE);
+        
+        display.setCursor(0, 50);
+        display.println("Suche Geraete...");
+        
+        // Animation alle 500ms
+        if (millis() - lastAnimationTime > 500) {
+          animationFrame = (animationFrame + 1) % 3;
+          lastAnimationTime = millis();
+        }
+      } else {
+        display.setCursor(0, 25);
+        display.println("Scanning...");
+        display.println("Bitte warten");
+      }
+      break;
+      
+    case SCAN_RESULTS:
+      // Ergebnisse des BLE-Scans anzeigen
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("BLE-Scan Ergebnisse");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      
+      if (foundDevices.size() > 0) {
+        int startIdx = scanIndex;
+        int endIdx = min(startIdx + 4, (int)foundDevices.size() - 1);
+        
+        for (int i = startIdx; i <= endIdx; i++) {
+          int y = 15 + (i - startIdx) * 12;
+          display.setCursor(0, y);
+          
+          // Name abschneiden, wenn zu lang
+          String name = foundDevices[i].name;
+          if (name.length() > 10) {
+            name = name.substring(0, 8) + "..";
+          }
+          
+          // RSSI-Balken zeichnen (0-4 Blöcke)
+          int rssi = foundDevices[i].rssi;
+          int bars = 0;
+          if (rssi > -50) bars = 4;
+          else if (rssi > -65) bars = 3;
+          else if (rssi > -75) bars = 2;
+          else if (rssi > -85) bars = 1;
+          
+          // Gerätename und Signalstärke
+          display.print(name);
+          display.setCursor(85, y);
+          
+          // Signal-Stärke Balken
+          for (int b = 0; b < 4; b++) {
+            if (b < bars) {
+              display.fillRect(85 + (b * 6), y, 4, 10 - (b * 2), SSD1306_WHITE);
+            } else {
+              display.drawRect(85 + (b * 6), y, 4, 10 - (b * 2), SSD1306_WHITE);
+            }
+          }
+          
+          // SwissAirDry Geräte markieren
+          if (foundDevices[i].isBeacon) {
+            display.drawBitmap(110, y, icon_check, 8, 8, SSD1306_WHITE);
+          }
+        }
+        
+        // Scrollanzeiger
+        if (startIdx > 0) {
+          display.drawTriangle(120, 15, 124, 15, 122, 11, SSD1306_WHITE);
+        }
+        if (endIdx < foundDevices.size() - 1) {
+          display.drawTriangle(120, 60, 124, 60, 122, 63, SSD1306_WHITE);
+        }
+        
+        display.setCursor(0, 55);
+        display.println("UP/DOWN: Scrollen");
+      } else {
+        display.setCursor(0, 25);
+        display.println("Keine Geraete");
+        display.println("gefunden!");
+      }
+      break;
+      
     case MAIN_MENU:
       display.setTextSize(1);
       display.setCursor(0, 0);
@@ -1139,6 +1232,57 @@ void executeMenuAction() {
       currentState = RESTART_CONFIRM;
       break;
   }
+}
+
+// WiFi-Scan starten (als BLE-Simulation)
+void startBLEScan() {
+  Serial.println("Starte WiFi-Scan als BLE-Simulation...");
+  
+  // Display-Zustand auf BLE-Scan setzen
+  isScanning = true;
+  lastScanTime = millis();
+  
+  // WLAN-Scan starten
+  int networksFound = WiFi.scanNetworks(false, true);
+  
+  // Gefundene Geräte löschen
+  foundDevices.clear();
+  
+  if (networksFound > 0) {
+    Serial.printf("Scan abgeschlossen, %d Netzwerke gefunden\n", networksFound);
+    
+    // Maximal 20 Netzwerke speichern
+    for (int i = 0; i < min(networksFound, 20); i++) {
+      BLEDevice device;
+      device.name = WiFi.SSID(i);
+      device.address = WiFi.BSSIDstr(i);
+      device.rssi = WiFi.RSSI(i);
+      device.isBeacon = (device.name.indexOf("SwissAirDry") >= 0); // Markiere SwissAirDry-Geräte
+      
+      foundDevices.push_back(device);
+      
+      Serial.printf("  %2d: %s, RSSI: %d dBm, MAC: %s %s\n", 
+                    i + 1, 
+                    device.name.c_str(), 
+                    device.rssi, 
+                    device.address.c_str(),
+                    device.isBeacon ? "(SwissAirDry!)" : "");
+    }
+    
+    // Sortiere nach Signalstärke (besseres Signal zuerst)
+    std::sort(foundDevices.begin(), foundDevices.end(), 
+              [](const BLEDevice& a, const BLEDevice& b) { 
+                return a.rssi > b.rssi; 
+              });
+    
+    // Zum Ergebnisbildschirm wechseln
+    currentState = SCAN_RESULTS;
+    scanIndex = 0;
+  } else {
+    Serial.println("Keine Netzwerke gefunden");
+  }
+  
+  isScanning = false;
 }
 
 void loop() {

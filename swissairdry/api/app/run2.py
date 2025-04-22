@@ -102,6 +102,7 @@ async def check_primary_server_availability():
         await asyncio.sleep(60)  # Alle 60 Sekunden prüfen
 
 
+# Verwende die on_event-Methode für Kompatibilität mit älteren FastAPI-Versionen
 @app.on_event("startup")
 async def startup_event():
     """Wird beim Start der Anwendung aufgerufen."""
@@ -148,8 +149,6 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Wird beim Herunterfahren der Anwendung aufgerufen."""
-    global mqtt_client
-    
     logger.info("API-Server wird heruntergefahren...")
     
     # BLE-Scanner stoppen, wenn er läuft

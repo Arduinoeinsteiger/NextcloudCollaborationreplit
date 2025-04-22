@@ -951,6 +951,11 @@ void updateDisplay() {
       }
       break;
       
+    case API_STATUS:
+      // API-Status-Bildschirm
+      displayApiStatus();
+      break;
+      
     case START_SCREEN:
       // Standard-Startbildschirm mit IP und QR-Code
       if (WiFi.status() == WL_CONNECTED) {

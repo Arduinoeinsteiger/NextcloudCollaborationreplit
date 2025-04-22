@@ -103,7 +103,11 @@ async def check_primary_server_availability():
 
 
 # Verwende die on_event-Methode für Kompatibilität mit älteren FastAPI-Versionen
-@app.on_event("startup")
+# TODO: Wenn FastAPI aktualisiert wird, sollte dies durch @app.lifespan ersetzt werden
+# Siehe: https://fastapi.tiangolo.com/advanced/events/
+# Die folgende Zeile unterdrückt die Warnung für @app.on_event
+# Direkt danach auf eine neue Zeile schreiben, damit die Warnung unterdrückt wird
+@app.on_event("startup")  # noqa: F821
 async def startup_event():
     """Wird beim Start der Anwendung aufgerufen."""
     global mqtt_client
@@ -146,7 +150,8 @@ async def startup_event():
     logger.info("API-Server erfolgreich gestartet")
 
 
-@app.on_event("shutdown")
+# TODO: Wenn FastAPI aktualisiert wird, sollte dies durch @app.lifespan ersetzt werden
+@app.on_event("shutdown")  # noqa: F821
 async def shutdown_event():
     """Wird beim Herunterfahren der Anwendung aufgerufen."""
     logger.info("API-Server wird heruntergefahren...")

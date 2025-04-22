@@ -217,6 +217,17 @@ async def integration_options(request: Request):
     return templates.TemplateResponse("integration_options.html", {"request": request})
 
 
+@app.get("/map-view", response_class=HTMLResponse)
+async def map_view(request: Request, lat: float = None, lon: float = None, device: str = None):
+    """Zeigt eine eingebettete Kartenansicht für Gerätestandorte."""
+    return templates.TemplateResponse("map_view.html", {
+        "request": request,
+        "lat": lat,
+        "lon": lon,
+        "device": device
+    })
+
+
 @app.get("/health", response_model=Dict[str, Any])
 async def health_check():
     """Health-Check-Endpunkt für Monitoring."""

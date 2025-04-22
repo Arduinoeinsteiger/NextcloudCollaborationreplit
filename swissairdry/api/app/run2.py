@@ -205,6 +205,18 @@ async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.get("/deck-preview", response_class=HTMLResponse)
+async def deck_preview(request: Request):
+    """Zeigt eine Vorschau der Deck-API-Integration."""
+    return templates.TemplateResponse("deck_preview.html", {"request": request})
+
+
+@app.get("/integration-options", response_class=HTMLResponse)
+async def integration_options(request: Request):
+    """Zeigt die Integrationsoptionen für SwissAirDry."""
+    return templates.TemplateResponse("integration_options.html", {"request": request})
+
+
 @app.get("/health", response_model=Dict[str, Any])
 async def health_check():
     """Health-Check-Endpunkt für Monitoring."""

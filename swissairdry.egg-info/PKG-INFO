@@ -25,6 +25,7 @@ Requires-Dist: pydantic>=2.11.3
 Requires-Dist: python-dotenv>=1.1.0
 Requires-Dist: python-multipart>=0.0.20
 Requires-Dist: qrcode>=8.1
+Requires-Dist: replit-object-storage>=1.0.2
 Requires-Dist: requests>=2.32.3
 Requires-Dist: setuptools>=78.1.0
 Requires-Dist: sqlalchemy>=2.0.40

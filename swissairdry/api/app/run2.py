@@ -36,7 +36,7 @@ import mqtt
 import utils
 
 # API-Routen importieren
-from routes import deck
+from routes import deck, location
 
 # Logging einrichten
 logging.basicConfig(
@@ -61,6 +61,7 @@ app = FastAPI(
 
 # API-Router registrieren
 app.include_router(deck.router)
+app.include_router(location.router)
 
 # CORS Middleware hinzufügen
 app.add_middleware(
@@ -118,6 +119,22 @@ async def startup_event():
         mqtt_client = mqtt.MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password)
         await mqtt_client.connect()
         logger.info(f"MQTT-Client verbunden mit {mqtt_host}:{mqtt_port}")
+        
+        # BLE-Scanner mit MQTT-Client initialisieren, wenn BLE aktiviert ist
+        if os.getenv("BLE_ENABLED", "").lower() == "true":
+            # Importiere hier, um Zirkelimporte zu vermeiden
+            import ble_scanner
+            from routes.location import get_ble_manager
+            
+            # BLE-Scanner initialisieren
+            ble_manager = get_ble_manager()
+            if hasattr(ble_manager, 'start_background_scan'):
+                # BLE-Scanner im Hintergrund starten
+                logger.info("BLE-Scanner wird gestartet...")
+                await ble_manager.start_background_scan()
+                logger.info("BLE-Scanner gestartet")
+            else:
+                logger.warning("BLE-Scanner konnte nicht initialisiert werden")
     except Exception as e:
         logger.error(f"Fehler bei der MQTT-Verbindung: {e}")
         logger.warning("MQTT-Verbindung fehlgeschlagen, Server läuft ohne MQTT-Unterstützung")

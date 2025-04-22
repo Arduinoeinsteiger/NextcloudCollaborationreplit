@@ -12,6 +12,9 @@
 #include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 
 // BLE-Scanning Bibliotheken
 #include <vector>
@@ -22,6 +25,11 @@
 // Bitte hier die WLAN-Daten eintragen
 const char* ssid = "G4UG";  // Ihr WLAN-Name
 const char* password = "Loeschdecke+1";  // Ihr WLAN-Passwort
+
+// ----- API-KONFIGURATION -----
+const char* apiServer = "api.vgnc.org";  // API-Server
+const int apiPort = 443;  // HTTPS-Port (443) für die API
+const String apiBasePath = "/v1";  // API-Basispfad
 
 // ----- HARDWARE-KONFIGURATION -----
 // Festverdrahtete Pins für Wemos D1 Mini (Pins aus Wemos-Skript beibehalten)
@@ -150,6 +158,20 @@ int avgPressure = 0;        // Durchschnittlicher Druckwert
 
 // Keine Sekundärboard-Kommunikation mehr
 
+// Gerätedaten-Struktur für API-Kommunikation
+struct DeviceData {
+  String deviceId;      // Geräte-ID (gleich wie Hostname)
+  float pressure;       // Druckwert in hPa
+  bool relayState;      // Status des Relais (an/aus)
+  int rssi;             // WLAN-Signalstärke in dBm
+  unsigned long uptime; // Betriebszeit in Sekunden
+};
+
+// API-Variablen
+DeviceData deviceData;          // Aktuelle Gerätedaten
+unsigned long lastApiUpdate = 0; // Zeitpunkt der letzten API-Aktualisierung
+const int API_UPDATE_INTERVAL = 30000; // Aktualisierungsintervall (30 Sekunden)
+
 // Menüzustände
 enum MenuState {
     SPLASH_SCREEN,     // Startlogo
@@ -162,7 +184,8 @@ enum MenuState {
     COUNTDOWN_SCREEN,  // Countdown-Anzeige mit Animation
     RESTART_CONFIRM,   // Neustartbestätigung
     SCAN_RESULTS,      // Ergebnisse des BLE-Scans anzeigen
-    PRESSURE_DISPLAY   // Anzeige des Drucksensor-Werts
+    PRESSURE_DISPLAY,  // Anzeige des Drucksensor-Werts
+    API_STATUS         // API-Verbindungsstatus
 };
 
 // Aktueller Menüzustand
@@ -1442,7 +1465,118 @@ void startBLEScan() {
   isScanning = false;
 }
 
-// Keine Sekundärboard-Funktionen mehr
+// API-Funktionen für die Kommunikation mit api.vgnc.org
+
+// Aktualisiert die DeviceData-Struktur mit aktuellen Daten
+void updateDeviceData() {
+  deviceData.deviceId = hostname;
+  deviceData.pressure = pressure;
+  deviceData.relayState = relayState;
+  deviceData.rssi = WiFi.RSSI();
+  deviceData.uptime = millis() / 1000;
+}
+
+// Sendet die aktuellen Gerätedaten an die API
+bool sendDataToApi() {
+  // Prüfen, ob WLAN verbunden ist
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Keine WLAN-Verbindung, API-Update übersprungen");
+    return false;
+  }
+
+  // Gerätedaten aktualisieren
+  updateDeviceData();
+
+  // HTTPS-Client einrichten
+  WiFiClientSecure client;
+  client.setInsecure();  // SSL-Zertifikatsvalidierung deaktivieren (für einfacheren Test)
+
+  // HTTP-Client für die Anfrage
+  HTTPClient https;
+  
+  // URL für API-Endpunkt zusammenbauen
+  String url = "https://";
+  url += apiServer;
+  if (apiPort != 443) {
+    url += ":" + String(apiPort);
+  }
+  url += apiBasePath + "/devices/" + hostname + "/data";
+
+  Serial.println("Verbinde mit API: " + url);
+
+  // Anfrage starten
+  if (!https.begin(client, url)) {
+    Serial.println("API-Verbindung fehlgeschlagen");
+    return false;
+  }
+
+  // JSON-Daten erstellen
+  StaticJsonDocument<200> doc;
+  doc["pressure"] = deviceData.pressure;
+  doc["relay_state"] = deviceData.relayState;
+  doc["rssi"] = deviceData.rssi;
+  doc["uptime"] = deviceData.uptime;
+
+  // JSON in String umwandeln
+  String jsonData;
+  serializeJson(doc, jsonData);
+
+  // Header setzen
+  https.addHeader("Content-Type", "application/json");
+  https.addHeader("X-Device-ID", hostname);
+
+  // Anfrage senden
+  int httpResponseCode = https.POST(jsonData);
+
+  // Antwort verarbeiten
+  if (httpResponseCode > 0) {
+    String response = https.getString();
+    Serial.printf("API-Antwort: %d - %s\n", httpResponseCode, response.c_str());
+    return true;
+  } else {
+    Serial.printf("API-Fehler: %d\n", httpResponseCode);
+    return false;
+  }
+
+  // Verbindung schließen
+  https.end();
+}
+
+// Zeigt den API-Status und die letzten übertragenen Daten an
+void displayApiStatus() {
+  if (!displayAvailable) return;
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("API Status");
+  display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+  
+  display.setCursor(0, 13);
+  display.print("Server: ");
+  display.println(apiServer);
+  
+  display.print("Gerät: ");
+  display.println(hostname);
+  
+  display.print("Letztes Update: ");
+  if (lastApiUpdate > 0) {
+    long secondsAgo = (millis() - lastApiUpdate) / 1000;
+    display.print(secondsAgo);
+    display.println(" s");
+    
+    display.print("Druck: ");
+    display.print(deviceData.pressure);
+    display.println(" hPa");
+    
+    display.print("Relais: ");
+    display.println(deviceData.relayState ? "AN" : "AUS");
+  } else {
+    display.println("Noch keins");
+  }
+  
+  display.display();
+}
 
 void loop() {
   // OTA-Anfragen bearbeiten
@@ -1451,7 +1585,15 @@ void loop() {
   // Webserver verarbeiten
   server.handleClient();
   
-  // Keine Kommunikation mit Sekundärboard mehr
+  // API-Synchronisierung (alle 30 Sekunden)
+  if (millis() - lastApiUpdate > API_UPDATE_INTERVAL) {
+    if (sendDataToApi()) {
+      lastApiUpdate = millis();
+      Serial.println("API-Update erfolgreich");
+    } else {
+      Serial.println("API-Update fehlgeschlagen");
+    }
+  }
   
   // Tasten überwachen
   handleButtons();

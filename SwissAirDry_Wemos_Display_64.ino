@@ -12,7 +12,6 @@
 #include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
 #include <ESP8266WebServer.h>
-#include <EasyButton.h> // Button-Bibliothek für verbesserte Tastensteuerung
 
 // BLE-Scanning Bibliotheken
 #include <vector>
@@ -77,10 +76,7 @@ String hostname = "SwissAirDry-";
 // Relais-Status
 bool relayState = false;
 
-// EasyButton Objekte für verbesserte Tastensteuerung
-EasyButton buttonUp(BUTTON_UP, 35, true, true);     // 35ms Entprellzeit, Pullup aktiv, invertierte Logik
-EasyButton buttonDown(BUTTON_DOWN, 35, true, true); // 35ms Entprellzeit, Pullup aktiv, invertierte Logik
-EasyButton buttonSelect(BUTTON_SELECT, 35, true, true); // 35ms Entprellzeit, Pullup aktiv, invertierte Logik
+// Tastenstatus-Variablen
 
 // Alte Tastenvariablen für Kompatibilität
 bool buttonUpState = false;
@@ -182,17 +178,10 @@ void setup() {
   digitalWrite(RELAY_PIN, LOW);  // Relais aus
   
   // Membranschalter konfigurieren
+  pinMode(BUTTON_UP, INPUT_PULLUP);
+  pinMode(BUTTON_DOWN, INPUT_PULLUP);
+  pinMode(BUTTON_SELECT, INPUT_PULLUP);
   pinMode(SENSOR_PIN, INPUT_PULLUP);
-  
-  // Buttons initialisieren
-  buttonUp.begin();
-  buttonDown.begin();
-  buttonSelect.begin();
-  
-  // Callback-Funktionen für Tastendrücke registrieren
-  buttonUp.onPressed(handleButtonUp);
-  buttonDown.onPressed(handleButtonDown);
-  buttonSelect.onPressed(handleButtonSelect);
   
   // Display initialisieren
   Wire.begin();  // SDA=D2(GPIO4), SCL=D1(GPIO5) sind Standard bei Wemos D1 Mini

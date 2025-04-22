@@ -3,7 +3,18 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["swissairdry", "swissairdry.api", "swissairdry.api.app"]
+packages = [
+    "swissairdry", 
+    "swissairdry.api", 
+    "swissairdry.api.app",
+    "swissairdry.api.app.routers",
+    "swissairdry.api.app.routes",
+    "swissairdry.db",
+    "swissairdry.integration",
+    "swissairdry.integration.deck",
+    "swissairdry.mqtt",
+    "swissairdry.nextcloud"
+]
 
 [project]
 name = "swissairdry"

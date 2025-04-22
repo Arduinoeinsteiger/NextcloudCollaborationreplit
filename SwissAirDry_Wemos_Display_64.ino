@@ -28,15 +28,15 @@ const char* password = "Loeschdecke+1";  // Ihr WLAN-Passwort
 #define LED_PIN 2        // GPIO2 (D4 auf Wemos D1 Mini) - Blau LED on-board
 #define LED_ON LOW       // LED ist aktiv LOW (invertiert)
 #define LED_OFF HIGH
-#define RELAY_PIN D5     // Relais-Pin für Desinfektionsgerät
+#define RELAY_PIN D3     // Relais-Pin für Desinfektionsgerät (geändert von D5)
 
-// Membranschalter (Taster) Pins
+// Membranschalter (Taster) Pins - Für einfachere Verkabelung (alle Tasten nebeneinander)
+#define BUTTON_SELECT D5 // Bestätigungstaste (OK-Button, geändert von D8)
 #define BUTTON_UP D6     // Taste oben 
 #define BUTTON_DOWN D7   // Taste unten
-#define BUTTON_SELECT D8 // Bestätigungstaste (auch als BUTTON_MID bezeichnet)
+#define BUTTON_BACK D8   // Zurück-Taste (optional)
 
 // Zusätzliche Pins für erweiterte Funktionalität
-#define SENSOR_PIN D3    // Zusätzlicher digitaler Sensor
 #define PRESSURE_SENSOR A0 // Analoger Drucksensor-Eingang
 
 // Display-Konfiguration
@@ -194,7 +194,7 @@ void setup() {
   pinMode(BUTTON_UP, INPUT_PULLUP);
   pinMode(BUTTON_DOWN, INPUT_PULLUP);
   pinMode(BUTTON_SELECT, INPUT_PULLUP);
-  pinMode(SENSOR_PIN, INPUT_PULLUP);
+  pinMode(BUTTON_BACK, INPUT_PULLUP); // Zurück-Taste statt des Sensor-Pins
   
   // Initialisierung der Drucksensor-Werte für gleitenden Durchschnitt
   for (int i = 0; i < numReadings; i++) {

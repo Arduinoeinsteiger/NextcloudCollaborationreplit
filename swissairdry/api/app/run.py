@@ -12,20 +12,19 @@ import asyncio
 import time
 import logging
 from datetime import datetime
-from typing import Dict, Optional, List, Any, Union
+from typing import Dict, List, Any
 
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from .database import engine, get_db, Base
-from . import models, schemas, crud
+from . import schemas, crud
 from .mqtt import MQTTClient
-from .utils import generate_api_key, verify_api_key
 
 # Logging einrichten
 logging.basicConfig(
@@ -91,6 +90,7 @@ async def check_primary_server_availability():
 async def startup_event():
     """Wird beim Start der Anwendung aufgerufen."""
     global mqtt_client
+    # mqtt_client ist global und wird entsprechend verwendet
     
     logger.info("API-Server wird gestartet...")
     
@@ -117,6 +117,7 @@ async def startup_event():
 async def shutdown_event():
     """Wird beim Herunterfahren der Anwendung aufgerufen."""
     global mqtt_client
+    # mqtt_client ist global und wird entsprechend verwendet
     
     logger.info("API-Server wird heruntergefahren...")
     

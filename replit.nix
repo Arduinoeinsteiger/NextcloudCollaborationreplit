@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.platformio-core
     pkgs.jq
     pkgs.mosquitto
     pkgs.rustc

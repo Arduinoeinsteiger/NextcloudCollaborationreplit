@@ -100,6 +100,13 @@ const int buttonDebounceTime = 200; // Entprellzeit in ms
 int menuPosition = 0;
 bool inMenuMode = false;
 
+// API-Status-Variablen
+bool apiConnected = false;
+unsigned long lastApiCheck = 0;
+const unsigned long API_CHECK_INTERVAL = 60000; // 1 Minute zwischen API-Checks
+String apiEndpoint = "api.vgnc.org";
+int apiResponseCode = 0;
+
 // StartLogo
 static const uint8_t SwissAirDry_StartLogo[] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x00,0x00,0x00,0x00,0x00,0x00,

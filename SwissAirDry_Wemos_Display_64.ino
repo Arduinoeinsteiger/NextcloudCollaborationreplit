@@ -63,6 +63,12 @@ struct BLEDevice {
 // Array für gefundene BLE-Geräte
 std::vector<BLEDevice> foundDevices;
 
+// Variablen für BLE-Scan (simuliert über WiFi)
+unsigned long lastScanTime = 0;
+const int SCAN_INTERVAL = 10000; // 10 Sekunden zwischen Scans
+bool isScanning = false;
+int scanIndex = 0;          // Für die Anzeige der Scan-Ergebnisse
+
 // Hostname mit eindeutiger Chip-ID
 String hostname = "SwissAirDry-";
 
@@ -840,6 +846,7 @@ void updateDisplay() {
         "Relais schalten",
         "WLAN-Info",
         "System-Info",
+        "BLE-Scan",
         "Neustart"
       };
       
@@ -1023,7 +1030,7 @@ void handleButtons() {
         
       case MAIN_MENU:
         // Im Menü nach unten
-        menuPosition = min(menuPosition + 1, 4); // Anzahl der Menüeinträge - 1
+        menuPosition = min(menuPosition + 1, 5); // Anzahl der Menüeinträge - 1
         break;
         
       case RELAY_CONTROL:
@@ -1122,7 +1129,13 @@ void executeMenuAction() {
       currentState = SYSTEM_INFO;
       break;
       
-    case 4: // Neustart
+    case 4: // BLE-Scan
+      currentState = BLE_SCAN;
+      // BLE-Scan starten
+      startBLEScan();
+      break;
+      
+    case 5: // Neustart
       currentState = RESTART_CONFIRM;
       break;
   }

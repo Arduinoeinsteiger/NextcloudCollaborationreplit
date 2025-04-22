@@ -27,7 +27,7 @@ const char* ssid = "G4UG";  // Ihr WLAN-Name
 const char* password = "Loeschdecke+1";  // Ihr WLAN-Passwort
 
 // ----- API-KONFIGURATION -----
-const char* apiServer = "api.vgnc.org";  // API-Server
+// Die API-Endpunkt-Variable wurde auf eine String-Variable geändert (apiEndpoint)
 const int apiPort = 443;  // HTTPS-Port (443) für die API
 const String apiBasePath = "/v1";  // API-Basispfad
 
@@ -104,7 +104,7 @@ bool inMenuMode = false;
 bool apiConnected = false;
 unsigned long lastApiCheck = 0;
 const unsigned long API_CHECK_INTERVAL = 60000; // 1 Minute zwischen API-Checks
-String apiEndpoint = "api.vgnc.org";
+String apiEndpoint = "api.vgnc.org"; // API-Endpunkt als String für einfachere Handhabung
 int apiResponseCode = 0;
 
 // StartLogo
@@ -592,6 +592,70 @@ void displayLoginInfo() {
 }
 
 // Optimierte QR-Code-Darstellung für 128x64 Display
+// API-Status anzeigen
+void displayApiStatus() {
+  if (!displayAvailable) return;
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("API-Status");
+  display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+  
+  // Verbindungsstatus
+  display.setCursor(0, 15);
+  display.print("Server: ");
+  display.println(apiEndpoint);
+  
+  display.setCursor(0, 25);
+  display.print("Status: ");
+  
+  // Verbindungsstatus prüfen
+  bool connected = false;
+  if (WiFi.status() == WL_CONNECTED) {
+    // Versuche MQTT und API zu kontaktieren
+    connected = apiConnected;
+    if (connected) {
+      display.println("Verbunden");
+    } else {
+      display.println("Nicht verbunden");
+    }
+  } else {
+    display.println("Kein WLAN");
+  }
+  
+  // Letztes Update anzeigen
+  display.setCursor(0, 35);
+  display.print("Letztes Update: ");
+  if (lastApiUpdate > 0) {
+    unsigned long timeSince = (millis() - lastApiUpdate) / 1000;
+    if (timeSince < 60) {
+      display.print(timeSince);
+      display.println(" Sek.");
+    } else if (timeSince < 3600) {
+      display.print(timeSince / 60);
+      display.println(" Min.");
+    } else {
+      display.print(timeSince / 3600);
+      display.println(" Std.");
+    }
+  } else {
+    display.println("Noch nie");
+  }
+  
+  // Anzahl der Geräte anzeigen
+  display.setCursor(0, 45);
+  display.println("Daten:");
+  display.print(" - Druck: ");
+  display.print(readPressureSensor(), 1);
+  display.println(" hPa");
+  
+  display.setCursor(0, 55);
+  display.println("SELECT: Test   UP/DOWN: Zurueck");
+  
+  display.display();
+}
+
 // Lesen und Verarbeiten des Drucksensor-Werts
 float readPressureSensor() {
   // Analogwert vom Sensor lesen (0-1023)
@@ -1362,6 +1426,13 @@ void handleButtons() {
         currentState = MAIN_MENU;
         break;
         
+      case API_STATUS:
+        // API-Verbindung testen
+        checkApiConnection();
+        // API-Status neu anzeigen
+        displayApiStatus();
+        break;
+        
       case RESTART_CONFIRM:
         // Gerät neustarten
         display.clearDisplay();
@@ -1486,6 +1557,50 @@ void startBLEScan() {
 
 // API-Funktionen für die Kommunikation mit api.vgnc.org
 
+// Prüft die Verbindung zur API
+void checkApiConnection() {
+  // Prüfen, ob WLAN verbunden ist
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Keine WLAN-Verbindung für API-Check");
+    apiConnected = false;
+    return;
+  }
+
+  Serial.println("Prüfe API-Verbindung zu " + apiEndpoint);
+  
+  WiFiClient client;
+  HTTPClient http;
+  
+  String url = "http://" + apiEndpoint;
+  
+  http.begin(client, url);
+  
+  // Status der letzten Prüfung speichern
+  lastApiCheck = millis();
+  
+  // Anfrage senden und Antwortcode prüfen
+  apiResponseCode = http.GET();
+  
+  if (apiResponseCode > 0) {
+    Serial.print("API-Antwort: ");
+    Serial.println(apiResponseCode);
+    
+    if (apiResponseCode == HTTP_CODE_OK) {
+      String payload = http.getString();
+      Serial.println("API-Antwort: " + payload);
+      apiConnected = true;
+    } else {
+      apiConnected = false;
+    }
+  } else {
+    Serial.print("API-Anfrage fehlgeschlagen: ");
+    Serial.println(http.errorToString(apiResponseCode));
+    apiConnected = false;
+  }
+  
+  http.end();
+}
+
 // Aktualisiert die DeviceData-Struktur mit aktuellen Daten
 void updateDeviceData() {
   deviceData.deviceId = hostname;
@@ -1515,7 +1630,7 @@ bool sendDataToApi() {
   
   // URL für API-Endpunkt zusammenbauen
   String url = "https://";
-  url += apiServer;
+  url += apiEndpoint;
   if (apiPort != 443) {
     url += ":" + String(apiPort);
   }
@@ -1573,7 +1688,7 @@ void displayApiStatus() {
   
   display.setCursor(0, 13);
   display.print("Server: ");
-  display.println(apiServer);
+  display.println(apiEndpoint);
   
   display.print("Gerät: ");
   display.println(hostname);

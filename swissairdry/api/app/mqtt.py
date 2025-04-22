@@ -44,14 +44,18 @@ class MQTTClient:
         
         # Zufälligen Client-ID erstellen, um doppelte Verbindungen zu vermeiden
         import uuid
-        client_id = f"swissairdry-api-{uuid.uuid4().hex[:8]}"
-        self.client = mqtt.Client(client_id=client_id)
+        # Längere Client-ID mit Zeitstempel für bessere Eindeutigkeit
+        client_id = f"swissairdry-api-{uuid.uuid4().hex[:8]}-{int(time.time())}"
+        # clean_session auf False setzen für stabilere Verbindungen
+        self.client = mqtt.Client(client_id=client_id, clean_session=False)
         self.is_connected_flag = False
         
         # Verbindungsstabilität optimieren
-        self.client.reconnect_delay_set(min_delay=1, max_delay=30)
+        self.client.reconnect_delay_set(min_delay=1, max_delay=60)
         self.client.max_inflight_messages_set(20)  # Default ist 20
         self.client.max_queued_messages_set(100)   # Mehr Nachrichten in der Queue
+        # Verbindungszeitlimits erhöhen für bessere Stabilität
+        self.client.connect_timeout = 30  # Sekunden
         
         # Callbacks registrieren
         self.client.on_connect = self._on_connect

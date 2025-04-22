@@ -10,6 +10,7 @@ Requires-Dist: aiofiles>=24.1.0
 Requires-Dist: bcrypt>=4.3.0
 Requires-Dist: bleak>=0.22.3
 Requires-Dist: fastapi>=0.115.12
+Requires-Dist: flake8>=7.2.0
 Requires-Dist: flask>=3.1.0
 Requires-Dist: flask-cors>=5.0.1
 Requires-Dist: flask-sqlalchemy>=3.1.1

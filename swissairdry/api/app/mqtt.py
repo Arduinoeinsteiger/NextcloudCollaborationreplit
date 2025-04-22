@@ -50,6 +50,7 @@ class MQTTClient:
         # Dies ist wichtig, um Probleme bei der Wiederverbindung zu vermeiden
         self.client = mqtt.Client(client_id=client_id, clean_session=True)
         self.is_connected_flag = False
+        self.needs_reconnect = False  # Flag für Thread-sichere Wiederverbindung
         
         # Verbindungsstabilität optimieren
         self.client.reconnect_delay_set(min_delay=1, max_delay=60)
@@ -250,6 +251,22 @@ class MQTTClient:
     def is_connected(self) -> bool:
         """Gibt zurück, ob der Client mit dem MQTT-Broker verbunden ist."""
         return self.is_connected_flag
+        
+    async def check_connection(self) -> None:
+        """
+        Überprüft den Verbindungsstatus und initiiert bei Bedarf eine Wiederverbindung.
+        Diese Methode sollte regelmäßig aus dem Hauptthread aufgerufen werden.
+        """
+        # Wenn ein Wiederverbindungsversuch angefordert wurde
+        if self.needs_reconnect:
+            logger.info("Ausstehendes Wiederverbindungs-Flag erkannt, starte Wiederverbindung...")
+            self.needs_reconnect = False  # Flag zurücksetzen
+            asyncio.create_task(self._reconnect_background())
+            
+        # Wenn keine Verbindung besteht, aber kein spezieller Wiederverbindungsversuch läuft
+        elif not self.is_connected_flag and not self.needs_reconnect:
+            logger.info("Keine MQTT-Verbindung aktiv, versuche Verbindung herzustellen...")
+            asyncio.create_task(self.connect())
     
     def _on_connect(self, client, userdata, flags, rc):
         """
@@ -294,7 +311,9 @@ class MQTTClient:
                 # Starte eine separate asynchrone Wiederverbindung
                 if prev_state:  # Nur wenn vorher verbunden, um Mehrfachaufrufe zu vermeiden
                     logger.info("Starte asynchrone Wiederverbindung...")
-                    asyncio.get_event_loop().create_task(self._reconnect_background())
+                    # Wir können nicht direkt aus einem Thread asyncio.create_task aufrufen
+                    # Stattdessen legen wir ein Flag fest, das in der Hauptschleife überprüft wird
+                    self.needs_reconnect = True
             else:
                 logger.warning(f"Unerwartete MQTT-Trennung mit Code {rc}")
                 # Bei anderen unerwarteten Trennungen versucht der Client automatisch,

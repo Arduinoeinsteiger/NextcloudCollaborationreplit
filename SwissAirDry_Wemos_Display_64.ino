@@ -989,10 +989,10 @@ void executeMenuAction() {
       currentState = BLE_SCAN;
       inMenuMode = false;
       isScanning = true;
-      startWiFiScan(); // WiFi-Scan als BLE-Simulation starten
+      startBLEScan(); // WiFi-Scan als BLE-Simulation starten
       break;
       
-    case 6: // Neustart
+    case 7: // Neustart
       display.clearDisplay();
       display.setTextSize(1);
       display.setCursor(0, 0);
@@ -1145,6 +1145,8 @@ void updateDisplay() {
         "Relais schalten",
         "WLAN-Info",
         "System-Info",
+        "API-Status",
+        "Drucksensor",
         "BLE-Scan",
         "Neustart"
       };
@@ -1350,7 +1352,7 @@ void handleButtons() {
         
       case MAIN_MENU:
         // Im Menü nach unten
-        menuPosition = min(menuPosition + 1, 5); // Anzahl der Menüeinträge - 1
+        menuPosition = min(menuPosition + 1, 6); // Anzahl der Menüeinträge - 1
         break;
         
       case RELAY_CONTROL:

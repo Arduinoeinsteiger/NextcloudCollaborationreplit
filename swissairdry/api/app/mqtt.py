@@ -44,8 +44,29 @@ class MQTTClient:
         
         # Zufälligen Client-ID erstellen, um doppelte Verbindungen zu vermeiden
         import uuid
-        # Längere Client-ID mit Zeitstempel für bessere Eindeutigkeit
-        client_id = f"swissairdry-api-{uuid.uuid4().hex[:8]}-{int(time.time())}"
+        import random
+        import socket
+        
+        # Noch eindeutigere Client-ID durch Kombination mehrerer Faktoren:
+        # - UUID (vollständig, nicht nur 8 Zeichen)
+        # - Aktueller Zeitstempel mit Mikrosekunden-Genauigkeit
+        # - Zufällige Zahl
+        # - Hostname (falls verfügbar)
+        try:
+            hostname = socket.gethostname()[:8]
+        except:
+            hostname = "nohost"
+            
+        timestamp = int(time.time() * 1000)  # Millisekunden
+        random_suffix = random.randint(1000, 9999)
+        client_id = f"swissairdry-api-{uuid.uuid4()}-{timestamp}-{random_suffix}-{hostname}"
+        
+        # Wenn die ID zu lang ist (Broker-Limits), kürzen
+        if len(client_id) > 128:
+            client_id = client_id[:128]
+            
+        logger.info(f"Generierte MQTT-Client-ID: {client_id}")
+        
         # clean_session auf True setzen, um alte Sessions zu vermeiden
         # Dies ist wichtig, um Probleme bei der Wiederverbindung zu vermeiden
         self.client = mqtt.Client(client_id=client_id, clean_session=True)
@@ -53,7 +74,9 @@ class MQTTClient:
         self.needs_reconnect = False  # Flag für Thread-sichere Wiederverbindung
         
         # Verbindungsstabilität optimieren
-        self.client.reconnect_delay_set(min_delay=1, max_delay=60)
+        # Benutze längere Verzögerungen, um aggressives Wiederverbinden zu vermeiden,
+        # was zu weiteren Problemen führen kann (Broker-Überlastung, Bannung, etc.)
+        self.client.reconnect_delay_set(min_delay=3, max_delay=120)
         self.client.max_inflight_messages_set(20)  # Default ist 20
         self.client.max_queued_messages_set(100)   # Mehr Nachrichten in der Queue
         # Anmerkung: connect_timeout ist leider kein direkt zugängliches Attribut
@@ -308,9 +331,50 @@ class MQTTClient:
                 # In diesem Fall sollte keine automatische Wiederverbindung erfolgen
                 # um zu verhindern, dass weitere Fehler auftreten
                 client.loop_stop()
-                # Starte eine separate asynchrone Wiederverbindung
+                
+                # Wir erstellen eine komplett neue Client-Instanz, da der alte möglicherweise
+                # Probleme mit der Client-ID hat
+                import uuid
+                import random
+                import socket
+                
+                try:
+                    hostname = socket.gethostname()[:8]
+                except:
+                    hostname = "nohost"
+                    
+                timestamp = int(time.time() * 1000)  # Millisekunden
+                random_suffix = random.randint(10000, 99999)  # Größerer Bereich
+                new_client_id = f"swissairdry-api-{uuid.uuid4()}-{timestamp}-{random_suffix}-{hostname}-reconnect"
+                
+                # Wenn die ID zu lang ist (Broker-Limits), kürzen
+                if len(new_client_id) > 128:
+                    new_client_id = new_client_id[:128]
+                    
+                logger.info(f"Erstelle neuen MQTT-Client mit ID: {new_client_id}")
+                
+                # Neuen Client erstellen
+                self.client = mqtt.Client(client_id=new_client_id, clean_session=True)
+                
+                # Callbacks registrieren
+                self.client.on_connect = self._on_connect
+                self.client.on_disconnect = self._on_disconnect
+                self.client.on_message = self._on_message
+                
+                # Verbindungsstabilität optimieren
+                self.client.reconnect_delay_set(min_delay=2, max_delay=120)  # Längere Wartezeiten
+                self.client.max_inflight_messages_set(20)
+                self.client.max_queued_messages_set(100)
+                
+                # Authentifizierung einrichten
+                if self.username and self.password:
+                    self.client.username_pw_set(self.username, self.password)
+                
+                # Starte eine separate asynchrone Wiederverbindung mit dem neuen Client
                 if prev_state:  # Nur wenn vorher verbunden, um Mehrfachaufrufe zu vermeiden
-                    logger.info("Starte asynchrone Wiederverbindung...")
+                    logger.info("Starte asynchrone Wiederverbindung mit neuem Client...")
+                    # Warten Sie länger vor dem erneuten Verbindungsversuch
+                    time.sleep(1)  # Kurze Pause im Thread 
                     # Wir können nicht direkt aus einem Thread asyncio.create_task aufrufen
                     # Stattdessen legen wir ein Flag fest, das in der Hauptschleife überprüft wird
                     self.needs_reconnect = True
@@ -318,6 +382,13 @@ class MQTTClient:
                 logger.warning(f"Unerwartete MQTT-Trennung mit Code {rc}")
                 # Bei anderen unerwarteten Trennungen versucht der Client automatisch,
                 # sich wieder zu verbinden, da wir reconnect_delay_set verwenden
+                
+                # Zusätzlich setzen wir ein Flag für eine manuelle Wiederverbindung nach einer Verzögerung
+                # Falls die automatische Wiederverbindung nicht funktioniert
+                if prev_state:  # Nur wenn vorher verbunden, um Mehrfachaufrufe zu vermeiden
+                    logger.info("Plane zusätzliche Wiederverbindung als Fallback...")
+                    time.sleep(0.5)  # Kurze Pause, damit die automatische Wiederverbindung zuerst versuchen kann
+                    self.needs_reconnect = True  # Flag für manuelle Wiederverbindung
         else:
             logger.info("MQTT-Verbindung normal getrennt")
     

@@ -195,54 +195,48 @@
         const statusIndicator = document.getElementById('status-indicator');
         statusIndicator.className = 'device-status status-online'; // Oder status-warning, status-offline
         
-        // Google Maps initialisieren
+        // Diese Funktion wird nicht mehr verwendet, da wir jetzt Leaflet verwenden
+    </script>
+    
+    <!-- OpenStreetMap mit Leaflet laden -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
+    
+    <script>
+        // Leaflet Karte initialisieren
         function initMap() {
             if (!lat || !lon) {
                 document.getElementById('map').innerHTML = '<div style="padding: 20px; text-align: center;">Keine Koordinaten verfügbar</div>';
                 return;
             }
             
-            const mapOptions = {
-                center: { lat: lat, lng: lon },
-                zoom: 15,
-                mapTypeId: google.maps.MapTypeId.ROADMAP
-            };
+            // Leaflet-Karte initialisieren
+            const map = L.map('map').setView([lat, lon], 15);
             
-            const map = new google.maps.Map(document.getElementById('map'), mapOptions);
+            // OpenStreetMap-Layer hinzufügen
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
             
             // Marker für den Gerätestandort hinzufügen
-            const marker = new google.maps.Marker({
-                position: { lat: lat, lng: lon },
-                map: map,
-                title: deviceName,
-                animation: google.maps.Animation.DROP
-            });
+            const marker = L.marker([lat, lon]).addTo(map);
             
-            // Info-Fenster hinzufügen
-            const infoContent = `
-                <div style="padding: 10px;">
+            // Popup mit Infos hinzufügen
+            marker.bindPopup(`
+                <div style="padding: 5px;">
                     <h3 style="margin-top: 0;">${deviceName}</h3>
                     <p><strong>ID:</strong> ${deviceId}</p>
                     <p><strong>Status:</strong> ${deviceStatus}</p>
                 </div>
-            `;
-            
-            const infoWindow = new google.maps.InfoWindow({
-                content: infoContent
-            });
-            
-            marker.addListener('click', () => {
-                infoWindow.open(map, marker);
-            });
-            
-            // Info-Fenster automatisch öffnen
-            infoWindow.open(map, marker);
+            `).openPopup();
         }
-    </script>
-    
-    <!-- Google Maps API laden -->
-    <script async defer
-        src="https://maps.googleapis.com/maps/api/js?callback=initMap">
+        
+        // Karte initialisieren wenn DOM geladen ist
+        document.addEventListener('DOMContentLoaded', initMap);
     </script>
 </body>
 </html>

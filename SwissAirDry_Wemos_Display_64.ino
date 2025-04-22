@@ -1352,7 +1352,7 @@ void handleButtons() {
         
       case MAIN_MENU:
         // Im Menü nach unten
-        menuPosition = min(menuPosition + 1, 6); // Anzahl der Menüeinträge - 1
+        menuPosition = min(menuPosition + 1, 7); // Anzahl der Menüeinträge - 1
         break;
         
       case RELAY_CONTROL:
@@ -1485,21 +1485,28 @@ void executeMenuAction() {
       inMenuMode = false;
       break;
       
-    case 4: // Drucksensor anzeigen
+    case 4: // API-Status
+      currentState = API_STATUS;
+      inMenuMode = false;
+      // API-Status anzeigen
+      displayApiStatus();
+      break;
+      
+    case 5: // Drucksensor anzeigen
       currentState = PRESSURE_DISPLAY;
       inMenuMode = false;
       // Sofort den Drucksensor anzeigen
       displayPressureScreen();
       break;
       
-    case 5: // BLE-Scan
+    case 6: // BLE-Scan
       currentState = BLE_SCAN;
       inMenuMode = false;
       // BLE-Scan starten
       startBLEScan();
       break;
       
-    case 6: // Neustart
+    case 7: // Neustart
       currentState = RESTART_CONFIRM;
       inMenuMode = false;
       break;

@@ -36,7 +36,8 @@ const char* password = "Loeschdecke+1";  // Ihr WLAN-Passwort
 #define BUTTON_SELECT D8 // Bestätigungstaste (auch als BUTTON_MID bezeichnet)
 
 // Zusätzliche Pins für erweiterte Funktionalität
-#define SENSOR_PIN D3    // Zusätzlicher Sensor (z.B. Drucksensor)
+#define SENSOR_PIN D3    // Zusätzlicher digitaler Sensor
+#define PRESSURE_SENSOR A0 // Analoger Drucksensor-Eingang
 
 // Display-Konfiguration
 #define OLED_RESET -1    // Kein Reset-Pin verwendet
@@ -134,6 +135,17 @@ static const uint8_t sandclock_frame3[] = {
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
 
+// Drucksensor-Variablen und Kalibrierung
+int pressureValue = 0;     // Rohwert vom Drucksensor
+float pressure = 0.0;      // Umgerechneter Druckwert in hPa oder mbar
+float minPressure = 900.0; // Minimaler Druckwert für Kalibrierung (entspricht 0 A0-Wert)
+float maxPressure = 1100.0; // Maximaler Druckwert für Kalibrierung (entspricht 1023 A0-Wert)
+const int numReadings = 10; // Anzahl der Messungen für den gleitenden Durchschnitt
+int pressureReadings[10];   // Array für die letzten 10 Drucksensor-Messwerte
+int readIndex = 0;          // Index für das Array
+int totalPressure = 0;      // Gesamtsumme für den gleitenden Durchschnitt
+int avgPressure = 0;        // Durchschnittlicher Druckwert
+
 // Menüzustände
 enum MenuState {
     SPLASH_SCREEN,     // Startlogo
@@ -145,7 +157,8 @@ enum MenuState {
     BLE_SCAN,          // BLE-Geräte scannen
     COUNTDOWN_SCREEN,  // Countdown-Anzeige mit Animation
     RESTART_CONFIRM,   // Neustartbestätigung
-    SCAN_RESULTS       // Ergebnisse des BLE-Scans anzeigen
+    SCAN_RESULTS,      // Ergebnisse des BLE-Scans anzeigen
+    PRESSURE_DISPLAY   // Anzeige des Drucksensor-Werts
 };
 
 // Aktueller Menüzustand
@@ -182,6 +195,12 @@ void setup() {
   pinMode(BUTTON_DOWN, INPUT_PULLUP);
   pinMode(BUTTON_SELECT, INPUT_PULLUP);
   pinMode(SENSOR_PIN, INPUT_PULLUP);
+  
+  // Initialisierung der Drucksensor-Werte für gleitenden Durchschnitt
+  for (int i = 0; i < numReadings; i++) {
+    pressureReadings[i] = 0;
+  }
+  totalPressure = 0;
   
   // Display initialisieren
   Wire.begin();  // SDA=D2(GPIO4), SCL=D1(GPIO5) sind Standard bei Wemos D1 Mini
@@ -539,6 +558,63 @@ void displayLoginInfo() {
 }
 
 // Optimierte QR-Code-Darstellung für 128x64 Display
+// Lesen und Verarbeiten des Drucksensor-Werts
+float readPressureSensor() {
+  // Analogwert vom Sensor lesen (0-1023)
+  pressureValue = analogRead(PRESSURE_SENSOR);
+  
+  // Gleitenden Durchschnitt berechnen
+  totalPressure = totalPressure - pressureReadings[readIndex];
+  pressureReadings[readIndex] = pressureValue;
+  totalPressure = totalPressure + pressureReadings[readIndex];
+  readIndex = (readIndex + 1) % numReadings;
+  
+  avgPressure = totalPressure / numReadings;
+  
+  // Umrechnung in hPa (mbar), angepasst an den Kalibrierungsbereich
+  pressure = map(avgPressure, 0, 1023, minPressure, maxPressure);
+  
+  // Ausgabe auf serielle Schnittstelle für Debugging
+  Serial.print("Druck-Rohwert: ");
+  Serial.print(pressureValue);
+  Serial.print(", Durchschnitt: ");
+  Serial.print(avgPressure);
+  Serial.print(", Druck (hPa): ");
+  Serial.println(pressure);
+  
+  return pressure;
+}
+
+// Anzeige der Drucksensor-Werte
+void displayPressureScreen() {
+  if (!displayAvailable) return;
+  
+  // Aktuellen Druck messen
+  float currentPressure = readPressureSensor();
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println("Drucksensor");
+  
+  display.setCursor(0, 16);
+  display.setTextSize(2);
+  display.print(currentPressure, 1);
+  display.print(" hPa");
+  
+  // Trendanzeige (einfacher Balken)
+  display.setCursor(0, 40);
+  display.setTextSize(1);
+  display.println("Trend:");
+  
+  // Einfacher Balken zur Visualisierung
+  int barWidth = map(avgPressure, 0, 1023, 0, 120);
+  display.drawRect(0, 50, 128, 10, SSD1306_WHITE);
+  display.fillRect(2, 52, barWidth, 6, SSD1306_WHITE);
+  
+  display.display();
+}
+
 void drawQRPattern() {
   // QR-Code für 128x64 OLED, optimiert für kleinere Höhe
   int qrSize = 42;  // Kleinerer QR-Code
@@ -612,6 +688,8 @@ void displayMenu() {
     "Relais schalten",
     "WLAN-Info anzeigen",
     "Geraete-Info",
+    "Drucksensor anzeigen",
+    "BLE-Scan starten",
     "Neustart"
   };
   

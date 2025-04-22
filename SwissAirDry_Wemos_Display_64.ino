@@ -1,6 +1,6 @@
 // SwissAirDry Wemos D1 Mini mit QR-Code-Anzeige
 // Optimiert für 128x64 OLED-Display
-// OTA-Updates + QR-Code mit IP-Adresse und Web-Passwort
+ich sehe das menü alles gut aber die me// OTA-Updates + QR-Code mit IP-Adresse und Web-Passwort
 
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -155,6 +155,7 @@ void setup() {
   pinMode(BUTTON_UP, INPUT_PULLUP);
   pinMode(BUTTON_DOWN, INPUT_PULLUP);
   pinMode(BUTTON_SELECT, INPUT_PULLUP);
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
   
   // Display initialisieren
   Wire.begin();  // SDA=D2(GPIO4), SCL=D1(GPIO5) sind Standard bei Wemos D1 Mini
@@ -166,16 +167,13 @@ void setup() {
     Serial.println("Display initialisiert");
     displayAvailable = true;
     
-    // Startbildschirm anzeigen
+    // Startlogo anzeigen
     display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.println("SwissAirDry");
-    display.println("Wemos D1 Mini");
-    display.println("Starte...");
+    display.drawBitmap(0, 0, SwissAirDry_StartLogo, 128, 64, SSD1306_WHITE);
     display.display();
-    delay(1000);
+    
+    // Splash-Screen-Startzeit setzen
+    splashStartTime = millis();
   }
   
   // Zufälliges Passwort generieren
@@ -190,7 +188,10 @@ void setup() {
   // Webserver einrichten
   setupWebServer();
   
-  // IP und Passwort als QR-Pattern anzeigen
+  // Nach dem Splash-Screen zum Hauptbildschirm wechseln
+  currentState = START_SCREEN;
+  
+  // IP und Passwort als QR-Pattern anzeigen, wenn WLAN verbunden
   if (displayAvailable && WiFi.status() == WL_CONNECTED) {
     displayLoginInfo();
   }
@@ -780,6 +781,337 @@ void executeMenuAction() {
   }
 }
 
+// Aktuellen Menüzustand auf dem Display anzeigen
+void updateDisplay() {
+  if (!displayAvailable) return;
+  
+  display.clearDisplay();
+  
+  switch (currentState) {
+    case SPLASH_SCREEN:
+      // Logo anzeigen
+      display.drawBitmap(0, 0, SwissAirDry_StartLogo, 128, 64, SSD1306_WHITE);
+      
+      // Prüfen, ob die Splash-Screen-Zeit abgelaufen ist
+      if (millis() - splashStartTime >= SPLASH_DURATION) {
+        currentState = START_SCREEN;
+      }
+      break;
+      
+    case START_SCREEN:
+      // Standard-Startbildschirm mit IP und QR-Code
+      if (WiFi.status() == WL_CONNECTED) {
+        displayLoginInfo();
+      } else {
+        display.setCursor(0, 0);
+        display.setTextSize(1);
+        display.println("SwissAirDry");
+        display.println("Wemos D1 Mini");
+        display.println("Kein WLAN");
+        display.println("Druecke SELECT fuer Menu");
+      }
+      break;
+      
+    case MAIN_MENU:
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("Hauptmenue");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      
+      // Menüpunkte
+      String menuItems[] = {
+        "Zurueck zum Start",
+        "Relais schalten",
+        "WLAN-Info",
+        "System-Info",
+        "Neustart"
+      };
+      
+      // Sichtbarer Bereich im Menü (max 5 Einträge)
+      int visibleStart = max(0, menuPosition - 2);
+      int visibleEnd = min(visibleStart + 4, (int)(sizeof(menuItems) / sizeof(menuItems[0])) - 1);
+      
+      for (int i = visibleStart; i <= visibleEnd; i++) {
+        if (i == menuPosition) {
+          // Aktueller Menüpunkt hervorgehoben
+          display.fillRect(0, 12 + (i - visibleStart) * 10, 128, 10, SSD1306_WHITE);
+          display.setTextColor(SSD1306_BLACK);
+          display.setCursor(2, 13 + (i - visibleStart) * 10);
+          display.print("> ");
+          display.print(menuItems[i]);
+          display.setTextColor(SSD1306_WHITE);
+        } else {
+          display.setCursor(2, 13 + (i - visibleStart) * 10);
+          display.print("  ");
+          display.print(menuItems[i]);
+        }
+      }
+      
+      // Scrollanzeiger
+      if (visibleStart > 0) {
+        display.drawTriangle(120, 12, 124, 12, 122, 8, SSD1306_WHITE);
+      }
+      if (visibleEnd < (sizeof(menuItems) / sizeof(menuItems[0])) - 1) {
+        display.drawTriangle(120, 60, 124, 60, 122, 63, SSD1306_WHITE);
+      }
+      break;
+      
+    case RELAY_CONTROL:
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("Relais steuern");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      display.setCursor(0, 20);
+      display.println("Status: " + String(relayState ? "AN" : "AUS"));
+      display.setCursor(0, 35);
+      display.println("SELECT: Umschalten");
+      display.setCursor(0, 45);
+      display.println("UP/DOWN: Zurueck");
+      break;
+      
+    case WLAN_INFO:
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("WLAN Information");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      display.setCursor(0, 15);
+      
+      if (WiFi.status() == WL_CONNECTED) {
+        display.println("SSID: " + String(ssid));
+        display.println("IP: " + WiFi.localIP().toString());
+        display.println("Signal: " + String(WiFi.RSSI()) + " dBm");
+        display.println("MAC: " + WiFi.macAddress());
+      } else {
+        display.println("Nicht verbunden");
+        display.println("Verbinde mit: " + String(ssid));
+      }
+      
+      display.setCursor(0, 55);
+      display.println("UP/DOWN: Zurueck");
+      break;
+      
+    case SYSTEM_INFO:
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("System Information");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      display.setCursor(0, 15);
+      display.println("Hostname: " + hostname);
+      display.println("Uptime: " + formatUptime());
+      display.println("Freier RAM: " + String(ESP.getFreeHeap()) + " Bytes");
+      display.println("Flash: " + String(ESP.getFlashChipSize() / 1024) + " KB");
+      
+      display.setCursor(0, 55);
+      display.println("UP/DOWN: Zurueck");
+      break;
+      
+    case COUNTDOWN_SCREEN:
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("Countdown");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      
+      // Sanduhr-Animation
+      const uint8_t* frames[] = {sandclock_frame1, sandclock_frame2, sandclock_frame3};
+      display.drawBitmap(48, 15, frames[animationFrame], 32, 32, SSD1306_WHITE);
+      
+      // Animation alle 500ms
+      if (millis() - lastAnimationTime > 500) {
+        animationFrame = (animationFrame + 1) % 3;
+        lastAnimationTime = millis();
+      }
+      
+      display.setCursor(0, 55);
+      display.println("SELECT: Abbrechen");
+      break;
+      
+    case RESTART_CONFIRM:
+      display.setTextSize(1);
+      display.setCursor(0, 0);
+      display.println("Neustart bestaetigen");
+      display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+      display.setCursor(0, 20);
+      display.println("Moechten Sie das");
+      display.println("Geraet neu starten?");
+      display.setCursor(0, 45);
+      display.println("SELECT: Ja");
+      display.println("UP/DOWN: Abbrechen");
+      break;
+  }
+  
+  display.display();
+}
+
+// Tastenaktionen überwachen und verarbeiten
+void handleButtons() {
+  // Tasten prüfen
+  bool currentUpState = !digitalRead(BUTTON_UP);       // LOW ist gedrückt bei Pullup
+  bool currentDownState = !digitalRead(BUTTON_DOWN);
+  bool currentSelectState = !digitalRead(BUTTON_SELECT);
+  
+  unsigned long currentMillis = millis();
+  
+  // Prüfen, ob genug Zeit seit dem letzten Tastendruck vergangen ist (Entprellung)
+  if (currentMillis - lastButtonPress < buttonDebounceTime) {
+    return;
+  }
+  
+  // Up-Taste gedrückt?
+  if (currentUpState && !buttonUpState) {
+    buttonUpState = true;
+    lastButtonPress = currentMillis;
+    
+    switch (currentState) {
+      case START_SCREEN:
+        // Zum Menü wechseln
+        currentState = MAIN_MENU;
+        menuPosition = 0;
+        break;
+        
+      case MAIN_MENU:
+        // Im Menü nach oben
+        menuPosition = max(0, menuPosition - 1);
+        break;
+        
+      case RELAY_CONTROL:
+      case WLAN_INFO:
+      case SYSTEM_INFO:
+      case RESTART_CONFIRM:
+        // Zurück zum Hauptmenü
+        currentState = MAIN_MENU;
+        break;
+        
+      case COUNTDOWN_SCREEN:
+        // Countdown abbrechen
+        currentState = MAIN_MENU;
+        break;
+    }
+    
+    Serial.println("Taste UP gedrückt");
+  } 
+  else if (!currentUpState && buttonUpState) {
+    buttonUpState = false;
+  }
+  
+  // Down-Taste gedrückt?
+  if (currentDownState && !buttonDownState) {
+    buttonDownState = true;
+    lastButtonPress = currentMillis;
+    
+    switch (currentState) {
+      case START_SCREEN:
+        // Zum Menü wechseln
+        currentState = MAIN_MENU;
+        menuPosition = 0;
+        break;
+        
+      case MAIN_MENU:
+        // Im Menü nach unten
+        menuPosition = min(menuPosition + 1, 4); // Anzahl der Menüeinträge - 1
+        break;
+        
+      case RELAY_CONTROL:
+      case WLAN_INFO:
+      case SYSTEM_INFO:
+      case RESTART_CONFIRM:
+        // Zurück zum Hauptmenü
+        currentState = MAIN_MENU;
+        break;
+        
+      case COUNTDOWN_SCREEN:
+        // Countdown abbrechen
+        currentState = MAIN_MENU;
+        break;
+    }
+    
+    Serial.println("Taste DOWN gedrückt");
+  } 
+  else if (!currentDownState && buttonDownState) {
+    buttonDownState = false;
+  }
+  
+  // Select-Taste gedrückt?
+  if (currentSelectState && !buttonSelectState) {
+    buttonSelectState = true;
+    lastButtonPress = currentMillis;
+    
+    switch (currentState) {
+      case SPLASH_SCREEN:
+        // Splash-Screen überspringen
+        currentState = START_SCREEN;
+        break;
+        
+      case START_SCREEN:
+        // Zum Menü wechseln
+        currentState = MAIN_MENU;
+        menuPosition = 0;
+        break;
+        
+      case MAIN_MENU:
+        // Menüpunkt auswählen
+        executeMenuAction();
+        break;
+        
+      case RELAY_CONTROL:
+        // Relais umschalten
+        relayState = !relayState;
+        digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
+        Serial.print("Relais: ");
+        Serial.println(relayState ? "AN" : "AUS");
+        break;
+        
+      case RESTART_CONFIRM:
+        // Gerät neustarten
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setCursor(0, 0);
+        display.println("Neustart...");
+        display.display();
+        delay(1000);
+        ESP.restart();
+        break;
+        
+      case COUNTDOWN_SCREEN:
+        // Countdown abbrechen
+        currentState = MAIN_MENU;
+        break;
+    }
+    
+    Serial.println("Taste SELECT gedrückt");
+  } 
+  else if (!currentSelectState && buttonSelectState) {
+    buttonSelectState = false;
+  }
+}
+
+// Ausgewählte Menüaktion ausführen
+void executeMenuAction() {
+  switch (menuPosition) {
+    case 0: // Zurück zum Start
+      currentState = START_SCREEN;
+      if (WiFi.status() == WL_CONNECTED && displayAvailable) {
+        displayLoginInfo();
+      }
+      break;
+      
+    case 1: // Relais schalten
+      currentState = RELAY_CONTROL;
+      break;
+      
+    case 2: // WLAN-Info
+      currentState = WLAN_INFO;
+      break;
+      
+    case 3: // System-Info
+      currentState = SYSTEM_INFO;
+      break;
+      
+    case 4: // Neustart
+      currentState = RESTART_CONFIRM;
+      break;
+  }
+}
+
 void loop() {
   // OTA-Anfragen bearbeiten
   ArduinoOTA.handle();
@@ -789,6 +1121,9 @@ void loop() {
   
   // Tasten überwachen
   handleButtons();
+  
+  // Display aktualisieren
+  updateDisplay();
   
   // WLAN-Verbindung prüfen und ggf. erneut verbinden
   if (WiFi.status() != WL_CONNECTED) {
@@ -802,8 +1137,8 @@ void loop() {
       delay(1000);
       WiFi.begin(ssid, password);
       
-      // Bei erfolgreicher Verbindung QR anzeigen wenn nicht im Menü
-      if (WiFi.status() == WL_CONNECTED && displayAvailable && !inMenuMode) {
+      // Bei erfolgreicher Verbindung QR anzeigen, wenn nicht im Menü
+      if (WiFi.status() == WL_CONNECTED && displayAvailable && currentState == START_SCREEN) {
         displayLoginInfo();
       }
     }

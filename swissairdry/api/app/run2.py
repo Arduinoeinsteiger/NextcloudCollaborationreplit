@@ -152,6 +152,20 @@ async def shutdown_event():
     
     logger.info("API-Server wird heruntergefahren...")
     
+    # BLE-Scanner stoppen, wenn er läuft
+    if os.getenv("BLE_ENABLED", "").lower() == "true":
+        try:
+            # Importiere hier, um Zirkelimporte zu vermeiden
+            from routes.location import get_ble_manager
+            
+            ble_manager = get_ble_manager()
+            if hasattr(ble_manager, 'stop_background_scan'):
+                logger.info("BLE-Scanner wird gestoppt...")
+                await ble_manager.stop_background_scan()
+                logger.info("BLE-Scanner gestoppt")
+        except Exception as e:
+            logger.error(f"Fehler beim Stoppen des BLE-Scanners: {e}")
+    
     # MQTT-Verbindung trennen
     if mqtt_client:
         await mqtt_client.disconnect()

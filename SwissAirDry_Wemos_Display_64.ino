@@ -13,6 +13,10 @@ ich sehe das menü alles gut aber die me// OTA-Updates + QR-Code mit IP-Adresse 
 #include <EEPROM.h>
 #include <ESP8266WebServer.h>
 
+// BLE-Scanning Bibliotheken
+#include <vector>
+#include <string>
+
 // ----- WLAN-KONFIGURATION -----
 // Bitte hier die WLAN-Daten eintragen
 const char* ssid = "G4UG";  // Ihr WLAN-Name
@@ -47,6 +51,17 @@ String webPassword = "";   // Wird automatisch generiert
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 ESP8266WebServer server(WEB_SERVER_PORT);
 bool displayAvailable = false;
+
+// Struktur für BLE-Geräte
+struct BLEDevice {
+  String address;
+  String name;
+  int rssi;
+  bool isBeacon;
+};
+
+// Array für gefundene BLE-Geräte
+std::vector<BLEDevice> foundDevices;
 
 // Hostname mit eindeutiger Chip-ID
 String hostname = "SwissAirDry-";
@@ -118,6 +133,7 @@ enum MenuState {
     RELAY_CONTROL,     // Relais steuern
     WLAN_INFO,         // WLAN-Informationen
     SYSTEM_INFO,       // Systeminformationen
+    BLE_SCAN,          // BLE-Geräte scannen
     COUNTDOWN_SCREEN,  // Countdown-Anzeige mit Animation
     RESTART_CONFIRM    // Neustartbestätigung
 };

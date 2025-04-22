@@ -100,6 +100,26 @@ async def check_primary_server_availability():
         # Hier Code zur Überprüfung des primären Servers implementieren
         # Bei Ausfall zum Backup-Server wechseln
         await asyncio.sleep(60)  # Alle 60 Sekunden prüfen
+        
+async def check_mqtt_connection():
+    """
+    Hintergrundaufgabe, die regelmäßig den MQTT-Verbindungsstatus überprüft
+    und bei Bedarf eine Wiederverbindung initiiert.
+    """
+    global mqtt_client
+    
+    while True:
+        try:
+            # Alle 30 Sekunden prüfen
+            await asyncio.sleep(30)
+            
+            # MQTT-Verbindungsstatus überprüfen und ggf. wiederherstellen
+            if mqtt_client:
+                await mqtt_client.check_connection()
+                
+        except Exception as e:
+            logger.error(f"Fehler bei Überprüfung der MQTT-Verbindung: {e}")
+            await asyncio.sleep(10)  # Bei Fehler 10 Sekunden warten
 
 
 # Verwende die on_event-Methode für Kompatibilität mit älteren FastAPI-Versionen
@@ -144,8 +164,9 @@ async def startup_event():
         logger.error(f"Fehler bei der MQTT-Verbindung: {e}")
         logger.warning("MQTT-Verbindung fehlgeschlagen, Server läuft ohne MQTT-Unterstützung")
     
-    # Hintergrundaufgabe starten
+    # Hintergrundaufgaben starten
     asyncio.create_task(check_primary_server_availability())
+    asyncio.create_task(check_mqtt_connection())
     
     logger.info("API-Server erfolgreich gestartet")
 

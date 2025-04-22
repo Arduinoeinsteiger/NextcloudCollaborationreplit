@@ -716,6 +716,7 @@ void displayMenu() {
     "Relais schalten",
     "WLAN-Info anzeigen",
     "Geraete-Info",
+    "API-Status",
     "Drucksensor anzeigen",
     "BLE-Scan starten",
     "Neustart"
@@ -793,7 +794,7 @@ void handleButtons() {
     lastButtonPress = currentMillis;
     
     if (inMenuMode) {
-      menuPosition = min(menuPosition + 1, 6); // Anzahl der Menüeinträge - 1
+      menuPosition = min(menuPosition + 1, 7); // Anzahl der Menüeinträge - 1
       displayMenu();
     } else {
       // Menü aktivieren
@@ -900,13 +901,19 @@ void executeMenuAction() {
       displayMenu();
       break;
       
-    case 4: // Drucksensor anzeigen
+    case 4: // API-Status anzeigen
+      // Zum API-Status-Bildschirm wechseln
+      currentState = API_STATUS;
+      inMenuMode = false;
+      break;
+      
+    case 5: // Drucksensor anzeigen
       // Zum Drucksensor-Bildschirm wechseln
       currentState = PRESSURE_DISPLAY;
       inMenuMode = false;
       break;
       
-    case 5: // BLE-Scan starten
+    case 6: // BLE-Scan starten
       // Zum BLE-Scan-Bildschirm wechseln
       currentState = BLE_SCAN;
       inMenuMode = false;

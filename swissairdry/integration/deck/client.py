@@ -120,7 +120,7 @@ class DeckAPIClient:
             raise DeckAPIException(f"Fehler beim Abrufen des Boards: {response.status_code}, {response.text}")
         return response.json()
     
-    def update_board(self, board_id: int, title: str = None, color: str = None) -> Dict[str, Any]:
+    def update_board(self, board_id: int, title: Optional[str] = None, color: Optional[str] = None) -> Dict[str, Any]:
         """
         Aktualisiere ein Board
         
@@ -135,10 +135,13 @@ class DeckAPIClient:
         # Erst aktuelles Board abrufen
         current_board = self.get_board(board_id)
         
+        current_title = current_board.get("title", "")
+        current_color = current_board.get("color", "0082c9")
+        
         # Nur angegebene Felder aktualisieren
         data = {
-            "title": title if title is not None else current_board.get("title"),
-            "color": color if color is not None else current_board.get("color"),
+            "title": title if title is not None else current_title,
+            "color": color if color is not None else current_color,
             "archived": current_board.get("archived", False)
         }
         
@@ -218,8 +221,8 @@ class DeckAPIClient:
         return response.json()
     
     def create_card(self, board_id: int, stack_id: int, title: str, 
-                   description: str = "", due_date: str = None, 
-                   labels: List[int] = None) -> Dict[str, Any]:
+                   description: str = "", due_date: Optional[str] = None, 
+                   labels: Optional[List[int]] = None) -> Dict[str, Any]:
         """
         Erstelle eine neue Karte in einem Stack
         
@@ -256,8 +259,8 @@ class DeckAPIClient:
         return response.json()
     
     def update_card(self, board_id: int, stack_id: int, card_id: int, 
-                   title: str = None, description: str = None, 
-                   due_date: str = None, labels: List[int] = None) -> Dict[str, Any]:
+                   title: Optional[str] = None, description: Optional[str] = None, 
+                   due_date: Optional[str] = None, labels: Optional[List[int]] = None) -> Dict[str, Any]:
         """
         Aktualisiere eine Karte
         
@@ -342,7 +345,7 @@ class DeckAPIClient:
     # Anhänge-Methoden
     
     def add_attachment(self, board_id: int, stack_id: int, card_id: int, 
-                      file_path: str, file_type: str = None) -> Dict[str, Any]:
+                      file_path: str, file_type: Optional[str] = None) -> Dict[str, Any]:
         """
         Füge einen Anhang zu einer Karte hinzu
         

@@ -572,7 +572,8 @@ float readPressureSensor() {
   avgPressure = totalPressure / numReadings;
   
   // Umrechnung in hPa (mbar), angepasst an den Kalibrierungsbereich
-  pressure = map(avgPressure, 0, 1023, minPressure, maxPressure);
+  // map() gibt nur ganzzahlige Werte zurück, daher manuelle Berechnung für Gleitkommawerte
+  pressure = minPressure + ((float)avgPressure / 1023.0) * (maxPressure - minPressure);
   
   // Ausgabe auf serielle Schnittstelle für Debugging
   Serial.print("Druck-Rohwert: ");
@@ -765,7 +766,7 @@ void handleButtons() {
     lastButtonPress = currentMillis;
     
     if (inMenuMode) {
-      menuPosition = min(menuPosition + 1, 4); // Anzahl der Menüeinträge - 1
+      menuPosition = min(menuPosition + 1, 6); // Anzahl der Menüeinträge - 1
       displayMenu();
     } else {
       // Menü aktivieren
@@ -872,7 +873,21 @@ void executeMenuAction() {
       displayMenu();
       break;
       
-    case 4: // Neustart
+    case 4: // Drucksensor anzeigen
+      // Zum Drucksensor-Bildschirm wechseln
+      currentState = PRESSURE_DISPLAY;
+      inMenuMode = false;
+      break;
+      
+    case 5: // BLE-Scan starten
+      // Zum BLE-Scan-Bildschirm wechseln
+      currentState = BLE_SCAN;
+      inMenuMode = false;
+      isScanning = true;
+      startWiFiScan(); // WiFi-Scan als BLE-Simulation starten
+      break;
+      
+    case 6: // Neustart
       display.clearDisplay();
       display.setTextSize(1);
       display.setCursor(0, 0);
@@ -1134,6 +1149,18 @@ void updateDisplay() {
       display.println("SELECT: Ja");
       display.println("UP/DOWN: Abbrechen");
       break;
+      
+    case PRESSURE_DISPLAY:
+      // Drucksensor-Bildschirm anzeigen
+      displayPressureScreen();
+      
+      // Tastensteuerung für diesen Bildschirm prüfen
+      if (currentUpState || currentDownState) {
+        // Zurück zum Menü bei Tastendruck
+        inMenuMode = true;
+        displayMenu();
+      }
+      break;
   }
   
   display.display();
@@ -1175,6 +1202,7 @@ void handleButtons() {
       case SYSTEM_INFO:
       case BLE_SCAN:
       case RESTART_CONFIRM:
+      case PRESSURE_DISPLAY:
         // Zurück zum Hauptmenü
         currentState = MAIN_MENU;
         break;
@@ -1220,6 +1248,7 @@ void handleButtons() {
       case SYSTEM_INFO:
       case BLE_SCAN:
       case RESTART_CONFIRM:
+      case PRESSURE_DISPLAY:
         // Zurück zum Hauptmenü
         currentState = MAIN_MENU;
         break;
@@ -1282,6 +1311,11 @@ void handleButtons() {
         startBLEScan();
         break;
         
+      case PRESSURE_DISPLAY:
+        // Zurück zum Menü
+        currentState = MAIN_MENU;
+        break;
+        
       case RESTART_CONFIRM:
         // Gerät neustarten
         display.clearDisplay();
@@ -1311,6 +1345,7 @@ void executeMenuAction() {
   switch (menuPosition) {
     case 0: // Zurück zum Start
       currentState = START_SCREEN;
+      inMenuMode = false;
       if (WiFi.status() == WL_CONNECTED && displayAvailable) {
         displayLoginInfo();
       }
@@ -1318,24 +1353,36 @@ void executeMenuAction() {
       
     case 1: // Relais schalten
       currentState = RELAY_CONTROL;
+      inMenuMode = false;
       break;
       
     case 2: // WLAN-Info
       currentState = WLAN_INFO;
+      inMenuMode = false;
       break;
       
     case 3: // System-Info
       currentState = SYSTEM_INFO;
+      inMenuMode = false;
       break;
       
-    case 4: // BLE-Scan
+    case 4: // Drucksensor anzeigen
+      currentState = PRESSURE_DISPLAY;
+      inMenuMode = false;
+      // Sofort den Drucksensor anzeigen
+      displayPressureScreen();
+      break;
+      
+    case 5: // BLE-Scan
       currentState = BLE_SCAN;
+      inMenuMode = false;
       // BLE-Scan starten
       startBLEScan();
       break;
       
-    case 5: // Neustart
+    case 6: // Neustart
       currentState = RESTART_CONFIRM;
+      inMenuMode = false;
       break;
   }
 }
@@ -1400,6 +1447,19 @@ void loop() {
   
   // Tasten überwachen
   handleButtons();
+  
+  // Drucksensor regelmäßig auslesen (alle 5 Sekunden)
+  static unsigned long lastPressureRead = 0;
+  if (millis() - lastPressureRead > 5000) {
+    if (currentState == PRESSURE_DISPLAY) {
+      // Direkt im Display anzeigen, wenn wir auf dem Drucksensor-Bildschirm sind
+      displayPressureScreen();
+    } else {
+      // Ansonsten im Hintergrund messen für den gleitenden Durchschnitt
+      readPressureSensor();
+    }
+    lastPressureRead = millis();
+  }
   
   // Display aktualisieren
   updateDisplay();

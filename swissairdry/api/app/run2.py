@@ -49,6 +49,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("swissairdry_api")
 
+# Zugriffspfad zu den Dokumentationen konfigurieren
+sys.path.append(os.path.join(os.path.dirname(current_dir), "docs"))
+try:
+    from serve_docs import register_docs_routes
+    DOCS_AVAILABLE = True
+except ImportError:
+    DOCS_AVAILABLE = False
+    logger.warning("API-Dokumentationsmodul nicht gefunden. Dokumentationsrouten deaktiviert.")
+
 # Datenbank initialisieren
 database.Base.metadata.create_all(bind=database.engine)
 
@@ -62,6 +71,15 @@ app = FastAPI(
 # API-Router registrieren
 app.include_router(deck.router)
 app.include_router(location.router)
+
+# Dokumentationsrouten registrieren, wenn verfügbar
+if DOCS_AVAILABLE:
+    try:
+        register_docs_routes(app)
+        logger.info("API-Dokumentationsrouten erfolgreich registriert")
+    except Exception as e:
+        logger.error(f"Fehler beim Registrieren der API-Dokumentationsrouten: {e}")
+        DOCS_AVAILABLE = False
 
 # CORS Middleware hinzufügen
 app.add_middleware(
@@ -280,6 +298,86 @@ async def admin_placeholder():
             <h1>SwissAirDry Admin-Bereich</h1>
             <p>Dieser Bereich ist noch in Entwicklung.</p>
             <p><a href="/">Zurück zur Startseite</a></p>
+        </body>
+    </html>
+    """
+
+@app.get("/api-documentation", response_class=HTMLResponse)
+async def api_documentation():
+    """Zeigt die API-Dokumentation an."""
+    return """
+    <html>
+        <head>
+            <title>SwissAirDry API-Dokumentation</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                h1 { color: #0066cc; }
+                .container { display: flex; flex-wrap: wrap; }
+                .sidebar { width: 250px; padding-right: 20px; }
+                .content { flex: 1; min-width: 300px; }
+                .card { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 15px; }
+                code { background-color: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
+                pre { background-color: #f5f5f5; padding: 10px; border-radius: 5px; overflow: auto; }
+                a { color: #0066cc; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+                .badge { display: inline-block; padding: 3px 6px; border-radius: 3px; font-size: 12px; font-weight: bold; color: white; background-color: #0066cc; margin-right: 5px; }
+            </style>
+        </head>
+        <body>
+            <h1>SwissAirDry API-Dokumentation</h1>
+            
+            <div class="container">
+                <div class="content">
+                    <div class="card">
+                        <h2>Übersicht</h2>
+                        <p>Willkommen bei der SwissAirDry API. Diese API ermöglicht die Verwaltung und Überwachung von SwissAirDry-Geräten, sowie die Steuerung von Luftentfeuchtern in Echtzeit.</p>
+                        <p>Die API ist RESTful und nutzt JSON für Anfragen und Antworten. Sie unterstützt Standard-HTTP-Methoden wie GET, POST, PUT und DELETE.</p>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>Verfügbare Ressourcen</h2>
+                        <ul>
+                            <li><a href="/static/docs/API_DOCUMENTATION.md">Ausführliche API-Dokumentation (Markdown)</a></li>
+                            <li><a href="/docs">Interaktive API-Dokumentation (Swagger UI)</a></li>
+                            <li><a href="/openapi.json">OpenAPI-Spezifikation (JSON)</a></li>
+                            <li><a href="/api/docs">API-Dokumentationsübersicht</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>Beispielanfrage</h2>
+                        <p>Hier ist ein einfaches Beispiel für eine API-Anfrage mit curl:</p>
+                        <pre><code>curl -X GET "https://api.vgnc.org/v1/api/devices" -H "X-API-Key: ihr_api_schlüssel"</code></pre>
+                    </div>
+                </div>
+                
+                <div class="sidebar">
+                    <div class="card">
+                        <h3>API-Endpunkte</h3>
+                        <ul>
+                            <li><a href="/api/devices">Geräte</a></li>
+                            <li><a href="/api/customers">Kunden</a></li>
+                            <li><a href="/api/jobs">Aufträge</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Status</h3>
+                        <p><span class="badge">Online</span></p>
+                        <p><a href="/health">API-Status prüfen</a></p>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>Support</h3>
+                        <p>Bei Fragen wenden Sie sich bitte an:</p>
+                        <p><a href="mailto:info@swissairdry.com">info@swissairdry.com</a></p>
+                    </div>
+                </div>
+            </div>
+            
+            <p style="margin-top: 40px; text-align: center; color: #666;">
+                &copy; 2023-2025 Swiss Air Dry Team. Alle Rechte vorbehalten.
+            </p>
         </body>
     </html>
     """

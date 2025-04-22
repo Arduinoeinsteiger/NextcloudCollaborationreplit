@@ -39,6 +39,10 @@ const char* password = "Loeschdecke+1";  // Ihr WLAN-Passwort
 // Zusätzliche Pins für erweiterte Funktionalität
 #define PRESSURE_SENSOR A0 // Analoger Drucksensor-Eingang
 
+// I2C-Konfiguration für zweites Board
+#define SECONDARY_I2C_ADDR 0x42  // I2C-Adresse des Sekundärboards
+#define SECONDARY_AVAILABLE false // Auf true setzen, wenn zweites Board angeschlossen ist
+
 // Display-Konfiguration
 #define OLED_RESET -1    // Kein Reset-Pin verwendet
 #define SCREEN_WIDTH 128 // OLED Display Breite in Pixeln
@@ -145,6 +149,20 @@ int pressureReadings[10];   // Array für die letzten 10 Drucksensor-Messwerte
 int readIndex = 0;          // Index für das Array
 int totalPressure = 0;      // Gesamtsumme für den gleitenden Durchschnitt
 int avgPressure = 0;        // Durchschnittlicher Druckwert
+
+// Datenstruktur für Sekundärboard-Kommunikation
+struct SecondaryData {
+  float temperature;       // Temperatur in °C
+  float humidity;          // Luftfeuchtigkeit in %
+  float pressure;          // Luftdruck in hPa
+  float voltage;           // Spannung in V
+  uint16_t light;          // Lichtsensor-Wert
+  uint8_t status;          // Status-Flags
+};
+
+SecondaryData secondaryData;     // Daten vom Sekundärboard
+unsigned long lastSecondaryRead = 0;  // Zeitpunkt der letzten Abfrage
+const int SECONDARY_READ_INTERVAL = 5000;  // Abfrageintervall (5 Sekunden)
 
 // Menüzustände
 enum MenuState {
@@ -1438,12 +1456,94 @@ void startBLEScan() {
   isScanning = false;
 }
 
+// Funktion zum Lesen von Daten vom Sekundärboard
+bool readSecondaryBoardData() {
+  if (!SECONDARY_AVAILABLE) {
+    return false;
+  }
+  
+  // Datenpaketenanforderung senden und Antwort lesen
+  Wire.beginTransmission(SECONDARY_I2C_ADDR);
+  byte error = Wire.endTransmission();
+  
+  if (error != 0) {
+    Serial.printf("I2C-Fehler: %d\n", error);
+    return false;
+  }
+  
+  // Daten anfordern (Größe der SecondaryData-Struktur)
+  Wire.requestFrom(SECONDARY_I2C_ADDR, sizeof(SecondaryData));
+  
+  if (Wire.available() < sizeof(SecondaryData)) {
+    Serial.println("Zu wenig Daten empfangen");
+    return false;
+  }
+  
+  // Daten in die Struktur lesen
+  byte* dataPtr = (byte*)&secondaryData;
+  for (size_t i = 0; i < sizeof(SecondaryData); i++) {
+    if (Wire.available()) {
+      dataPtr[i] = Wire.read();
+    }
+  }
+  
+  // Debug-Ausgabe der empfangenen Daten
+  Serial.println("Daten vom Sekundärboard empfangen:");
+  Serial.printf("Licht: %d\n", secondaryData.light);
+  Serial.printf("Spannung: %.2f V\n", secondaryData.voltage);
+  
+  if (secondaryData.temperature > 0) {
+    Serial.printf("Temperatur: %.1f °C\n", secondaryData.temperature);
+  }
+  
+  if (secondaryData.humidity > 0) {
+    Serial.printf("Luftfeuchtigkeit: %.1f %%\n", secondaryData.humidity);
+  }
+  
+  if (secondaryData.pressure > 0) {
+    Serial.printf("Luftdruck: %.1f hPa\n", secondaryData.pressure);
+  }
+  
+  return true;
+}
+
+// Befehl an das Sekundärboard senden
+bool sendCommandToSecondary(uint8_t command, uint8_t param1 = 0, uint8_t param2 = 0) {
+  if (!SECONDARY_AVAILABLE) {
+    return false;
+  }
+  
+  Wire.beginTransmission(SECONDARY_I2C_ADDR);
+  Wire.write(command);
+  Wire.write(param1);
+  Wire.write(param2);
+  byte error = Wire.endTransmission();
+  
+  if (error != 0) {
+    Serial.printf("Fehler beim Senden des Befehls: %d\n", error);
+    return false;
+  }
+  
+  return true;
+}
+
 void loop() {
   // OTA-Anfragen bearbeiten
   ArduinoOTA.handle();
   
   // Webserver verarbeiten
   server.handleClient();
+  
+  // Vom Sekundärboard lesen (wenn aktiviert)
+  if (SECONDARY_AVAILABLE && millis() - lastSecondaryRead > SECONDARY_READ_INTERVAL) {
+    lastSecondaryRead = millis();
+    if (readSecondaryBoardData()) {
+      // Erfolgreiche Kommunikation mit LED anzeigen
+      digitalWrite(LED_PIN, LED_ON);
+      delay(10);
+      digitalWrite(LED_PIN, LED_OFF);
+    }
+  }
   
   // Tasten überwachen
   handleButtons();

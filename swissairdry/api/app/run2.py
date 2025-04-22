@@ -35,6 +35,9 @@ import crud
 import mqtt
 import utils
 
+# API-Routen importieren
+from routes import deck
+
 # Logging einrichten
 logging.basicConfig(
     level=logging.INFO,
@@ -55,6 +58,9 @@ app = FastAPI(
     description="API für die Verwaltung von SwissAirDry-Geräten und -Daten",
     version="1.0.0",
 )
+
+# API-Router registrieren
+app.include_router(deck.router)
 
 # CORS Middleware hinzufügen
 app.add_middleware(

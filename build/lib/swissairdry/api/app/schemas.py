@@ -145,8 +145,7 @@ class Customer(CustomerBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- Auftrags-Schemas ---
@@ -193,8 +192,7 @@ class Job(JobBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- Bericht-Schemas ---
@@ -219,8 +217,7 @@ class Report(ReportBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- Benutzer-Schemas ---
@@ -246,8 +243,7 @@ class User(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- Warnung-Schemas ---
@@ -275,8 +271,7 @@ class Alert(AlertBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- Energiekosten-Schemas ---
@@ -301,8 +296,7 @@ class EnergyCost(EnergyCostBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- API-Schlüssel-Schemas ---
@@ -328,8 +322,7 @@ class APIKey(APIKeyBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        orm_mode = True
+    class Config: from_attributes = True
 
 
 # --- Gerätebefehle-Schema ---

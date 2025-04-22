@@ -245,7 +245,7 @@ class SwissAirDryDeckIntegration:
         )
     
     def add_task_card(self, board_id: int, task_title: str, task_description: str, 
-                    assigned_to: str = None, due_date: datetime = None, 
+                    assigned_to: Optional[str] = None, due_date: Optional[datetime] = None, 
                     stack_name: str = "In Vorbereitung") -> int:
         """
         Füge eine Aufgabenkarte zu einem Auftragsboard hinzu
@@ -287,7 +287,7 @@ class SwissAirDryDeckIntegration:
         return card["id"]
     
     def complete_task(self, board_id: int, card_id: int, source_stack_id: int, 
-                    completion_note: str = None) -> None:
+                    completion_note: Optional[str] = None) -> None:
         """
         Markiere eine Aufgabe als abgeschlossen, indem die Karte in den "Abgeschlossen"-Stack verschoben wird
         

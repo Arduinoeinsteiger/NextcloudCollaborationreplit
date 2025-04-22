@@ -1,6 +1,6 @@
 // SwissAirDry Wemos D1 Mini mit QR-Code-Anzeige
 // Optimiert für 128x64 OLED-Display
-ich sehe das menü alles gut aber die me// OTA-Updates + QR-Code mit IP-Adresse und Web-Passwort
+// OTA-Updates + QR-Code mit IP-Adresse und Web-Passwort
 
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -12,9 +12,11 @@ ich sehe das menü alles gut aber die me// OTA-Updates + QR-Code mit IP-Adresse 
 #include <Adafruit_SSD1306.h>
 #include <EEPROM.h>
 #include <ESP8266WebServer.h>
+#include <EasyButton.h> // Button-Bibliothek für verbesserte Tastensteuerung
 
 // BLE-Scanning Bibliotheken
 #include <vector>
+#include <algorithm> // Für std::sort
 #include <string>
 
 // ----- WLAN-KONFIGURATION -----
@@ -75,7 +77,12 @@ String hostname = "SwissAirDry-";
 // Relais-Status
 bool relayState = false;
 
-// Tastenstatus
+// EasyButton Objekte für verbesserte Tastensteuerung
+EasyButton buttonUp(BUTTON_UP, 35, true, true);     // 35ms Entprellzeit, Pullup aktiv, invertierte Logik
+EasyButton buttonDown(BUTTON_DOWN, 35, true, true); // 35ms Entprellzeit, Pullup aktiv, invertierte Logik
+EasyButton buttonSelect(BUTTON_SELECT, 35, true, true); // 35ms Entprellzeit, Pullup aktiv, invertierte Logik
+
+// Alte Tastenvariablen für Kompatibilität
 bool buttonUpState = false;
 bool buttonDownState = false;
 bool buttonSelectState = false;
@@ -175,10 +182,17 @@ void setup() {
   digitalWrite(RELAY_PIN, LOW);  // Relais aus
   
   // Membranschalter konfigurieren
-  pinMode(BUTTON_UP, INPUT_PULLUP);
-  pinMode(BUTTON_DOWN, INPUT_PULLUP);
-  pinMode(BUTTON_SELECT, INPUT_PULLUP);
   pinMode(SENSOR_PIN, INPUT_PULLUP);
+  
+  // Buttons initialisieren
+  buttonUp.begin();
+  buttonDown.begin();
+  buttonSelect.begin();
+  
+  // Callback-Funktionen für Tastendrücke registrieren
+  buttonUp.onPressed(handleButtonUp);
+  buttonDown.onPressed(handleButtonDown);
+  buttonSelect.onPressed(handleButtonSelect);
   
   // Display initialisieren
   Wire.begin();  // SDA=D2(GPIO4), SCL=D1(GPIO5) sind Standard bei Wemos D1 Mini
@@ -1092,9 +1106,17 @@ void handleButtons() {
       case RELAY_CONTROL:
       case WLAN_INFO:
       case SYSTEM_INFO:
+      case BLE_SCAN:
       case RESTART_CONFIRM:
         // Zurück zum Hauptmenü
         currentState = MAIN_MENU;
+        break;
+        
+      case SCAN_RESULTS:
+        // Bei UP-Taste nach oben scrollen
+        if (foundDevices.size() > 0 && scanIndex > 0) {
+          scanIndex--;
+        }
         break;
         
       case COUNTDOWN_SCREEN:
@@ -1129,9 +1151,17 @@ void handleButtons() {
       case RELAY_CONTROL:
       case WLAN_INFO:
       case SYSTEM_INFO:
+      case BLE_SCAN:
       case RESTART_CONFIRM:
         // Zurück zum Hauptmenü
         currentState = MAIN_MENU;
+        break;
+        
+      case SCAN_RESULTS:
+        // Bei DOWN-Taste nach unten scrollen
+        if (foundDevices.size() > 0 && scanIndex < foundDevices.size() - 1) {
+          scanIndex++;
+        }
         break;
         
       case COUNTDOWN_SCREEN:
@@ -1174,6 +1204,15 @@ void handleButtons() {
         digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
         Serial.print("Relais: ");
         Serial.println(relayState ? "AN" : "AUS");
+        break;
+        
+      case BLE_SCAN:
+        // Nichts tun, da der Scan bereits läuft
+        break;
+        
+      case SCAN_RESULTS:
+        // Beim Drücken von SELECT neuen Scan starten
+        startBLEScan();
         break;
         
       case RESTART_CONFIRM:

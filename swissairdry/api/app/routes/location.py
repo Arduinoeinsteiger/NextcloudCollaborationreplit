@@ -42,7 +42,7 @@ class DeviceLocationResponse(BaseModel):
 # Dependency für BLE-Manager
 def get_ble_manager():
     """Erstellt und gibt eine Instanz des BLE-Managers zurück"""
-    from run2 import mqtt_client  # Import hier, um Zirkelimports zu vermeiden
+    from run2 import mqtt_client  # import hier, um Zirkelimports zu vermeiden
     
     # Es wird nur eine einzige Instanz des BLE-Managers erstellt und wiederverwendet
     if not hasattr(get_ble_manager, "manager"):

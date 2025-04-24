@@ -79,7 +79,7 @@ class MQTTClient:
             try:
                 # Neuer Stil mit API-Version (paho-mqtt >= 2.0.0)
                 if hasattr(mqtt, 'CallbackAPIVersion'):
-                    self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=self.client_id)
+                    self.client = mqtt.Client(client_id=self.client_id, callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
                 # Alter Stil ohne API-Version (paho-mqtt < 2.0.0)
                 else:
                     self.client = mqtt.Client(client_id=self.client_id)

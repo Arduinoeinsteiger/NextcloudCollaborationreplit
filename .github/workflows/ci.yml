@@ -181,27 +181,35 @@ jobs:
         id: check_php
         uses: andstor/file-existence-action@v2
         with:
-          files: "composer.json"
+          files: "composer.json, nextcloud/composer.json"
       
       - name: Set up PHP
         if: steps.check_php.outputs.files_exists == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          extensions: mbstring, intl
+          extensions: mbstring, intl, dom, xml, gd
           tools: composer:v2
       
-      - name: Install dependencies
+      - name: Check PHP Packages
         if: steps.check_php.outputs.files_exists == 'true'
         run: |
-          composer validate --no-check-all || true
-          composer install --prefer-dist --no-progress || echo "Composer install failed, but continuing"
-      
-      - name: Run PHP tests
-        if: steps.check_php.outputs.files_exists == 'true'
-        run: |
-          if [ -f "vendor/bin/phpunit" ]; then
-            vendor/bin/phpunit || echo "PHP tests failed, but continuing"
-          else
-            echo "PHPUnit not found, skipping tests"
-          fi
+          # Prüfe alle composer.json Dateien rekursiv
+          find . -name "composer.json" -type f | while read -r composerfile; do
+            echo "Validiere $composerfile"
+            dir=$(dirname "$composerfile")
+            cd "$dir" || continue
+            
+            # Validiere und installiere
+            composer validate --no-check-all || true
+            composer install --prefer-dist --no-progress --no-interaction || echo "Composer install failed for $dir, but continuing"
+            
+            # Führe Tests aus, falls vorhanden
+            if [ -f "vendor/bin/phpunit" ]; then
+              vendor/bin/phpunit || echo "PHP tests failed for $dir, but continuing"
+            else
+              echo "PHPUnit not found in $dir, skipping tests"
+            fi
+            
+            cd - > /dev/null || exit
+          done

@@ -93,6 +93,7 @@ args = "python -m pytest"
 
 [deployment]
 run = ["sh", "-c", "cd docker-base-api/app && python run.py"]
+deploymentTarget = "cloudrun"
 
 [nix]
 channel = "stable-24_05"

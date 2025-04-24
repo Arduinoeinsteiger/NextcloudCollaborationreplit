@@ -100,7 +100,15 @@ class DeckAPIClient:
         Returns:
             List[Dict]: Liste aller Boards
         """
-        return self._request("GET", "boards")
+        result = self._request("GET", "boards")
+        # Stellen Sie sicher, dass wir eine Liste zurückgeben
+        if isinstance(result, list):
+            return result
+        elif isinstance(result, dict) and "data" in result and isinstance(result["data"], list):
+            return result["data"]
+        else:
+            self.logger.warning(f"Unerwartetes Format von get_boards: {type(result)}")
+            return []
     
     def get_board(self, board_id: int) -> Dict[str, Any]:
         """
@@ -141,7 +149,15 @@ class DeckAPIClient:
         Returns:
             List[Dict]: Liste aller Listen im Board
         """
-        return self._request("GET", f"boards/{board_id}/stacks")
+        result = self._request("GET", f"boards/{board_id}/stacks")
+        # Stellen Sie sicher, dass wir eine Liste zurückgeben
+        if isinstance(result, list):
+            return result
+        elif isinstance(result, dict) and "data" in result and isinstance(result["data"], list):
+            return result["data"]
+        else:
+            self.logger.warning(f"Unerwartetes Format von get_stacks: {type(result)}")
+            return []
     
     def create_stack(self, board_id: int, title: str) -> Dict[str, Any]:
         """
@@ -168,7 +184,15 @@ class DeckAPIClient:
         Returns:
             List[Dict]: Liste aller Karten in der Liste
         """
-        return self._request("GET", f"boards/{board_id}/stacks/{stack_id}/cards")
+        result = self._request("GET", f"boards/{board_id}/stacks/{stack_id}/cards")
+        # Stellen Sie sicher, dass wir eine Liste zurückgeben
+        if isinstance(result, list):
+            return result
+        elif isinstance(result, dict) and "data" in result and isinstance(result["data"], list):
+            return result["data"]
+        else:
+            self.logger.warning(f"Unerwartetes Format von get_cards: {type(result)}")
+            return []
     
     def create_card(
         self, 
@@ -196,6 +220,13 @@ class DeckAPIClient:
             "description": description
         }
         if labels:
-            data["labels"] = labels
+            # Labels als String-Liste oder JSON-Feld hinzufügen, je nach API-Anforderung
+            try:
+                data["labels"] = ",".join(map(str, labels))
+            except (TypeError, ValueError):
+                self.logger.warning(f"Labels konnten nicht konvertiert werden: {labels}")
+                # Fallback: als JSON
+                import json
+                data["labels"] = json.dumps(labels)
             
         return self._request("POST", f"boards/{board_id}/stacks/{stack_id}/cards", data=data)

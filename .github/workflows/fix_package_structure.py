@@ -42,7 +42,11 @@ def create_init_files(base_dir):
 
 def main():
     """Hauptfunktion für die Ausführung des Skripts."""
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if len(sys.argv) > 1:
+        base_dir = os.path.abspath(sys.argv[1])
+    else:
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    
     print(f"Basis-Verzeichnis: {base_dir}")
     
     # Stelle sicher, dass das swissairdry-Verzeichnis existiert
@@ -50,6 +54,27 @@ def main():
     if not os.path.isdir(swissairdry_dir):
         print(f"Fehler: Das swissairdry-Verzeichnis wurde nicht gefunden: {swissairdry_dir}", file=sys.stderr)
         return 1
+    
+    # Stelle sicher, dass kritische Verzeichnisse existieren
+    critical_dirs = [
+        'swissairdry/db',
+        'swissairdry/mqtt',
+        'swissairdry/nextcloud',
+        'swissairdry/integration',
+        'swissairdry/integration/deck',
+        'swissairdry/api/app/routes',
+        'swissairdry/api/app/routers',
+        'swissairdry/ExApp',
+        'swissairdry/esp',
+        'swissairdry/mobile',
+        'swissairdry/docs'
+    ]
+    
+    for d in critical_dirs:
+        full_path = os.path.join(base_dir, d)
+        if not os.path.exists(full_path):
+            os.makedirs(full_path, exist_ok=True)
+            print(f"Verzeichnis erstellt: {full_path}")
     
     # Erstelle __init__.py Dateien
     created_files = create_init_files(swissairdry_dir)

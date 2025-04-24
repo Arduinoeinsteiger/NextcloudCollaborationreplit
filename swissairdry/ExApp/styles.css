@@ -11,6 +11,11 @@
   --warning-color: #ff9800;
   --error-color: #f44336;
   --info-color: #2196f3;
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --tooltip-bg: rgba(0, 0, 0, 0.8);
+  --tutorial-bg: #ffffff;
+  --tutorial-highlight: rgba(0, 194, 167, 0.3);
+  --tutorial-shadow: rgba(0, 0, 0, 0.2);
 }
 
 /* Dark mode */
@@ -20,6 +25,9 @@
     --card-bg: #1e1e1e;
     --text-color: #e0e0e0;
     --border-color: #333333;
+    --tutorial-bg: #1e1e1e;
+    --tutorial-highlight: rgba(0, 130, 201, 0.3);
+    --tutorial-shadow: rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -254,6 +262,210 @@ footer {
   color: var(--error-color);
 }
 
+/* Tutorial Overlay */
+#tutorial-btn {
+  margin-left: 10px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 30px;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tutorial-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--overlay-bg);
+}
+
+.tutorial-content {
+  position: relative;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  background-color: var(--tutorial-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px var(--tutorial-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 1001;
+}
+
+.tutorial-header {
+  padding: 1.5rem;
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tutorial-header h2 {
+  margin: 0;
+  color: var(--text-light);
+}
+
+#tutorial-close {
+  background: none;
+  color: var(--text-light);
+  font-size: 1.5rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+#tutorial-close:hover {
+  background-color: var(--secondary-color);
+}
+
+.tutorial-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.tutorial-step {
+  display: none;
+}
+
+.tutorial-step.active {
+  display: block;
+}
+
+.tutorial-step h3 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+.tutorial-step p {
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.tutorial-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  max-height: 200px;
+}
+
+.tutorial-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tutorial-progress {
+  text-align: center;
+  font-weight: 500;
+}
+
+#tutorial-prev, #tutorial-next {
+  min-width: 100px;
+}
+
+#tutorial-prev:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Highlight element during tutorial */
+.tutorial-highlight {
+  position: relative;
+  z-index: 999;
+  box-shadow: 0 0 0 4px var(--tutorial-highlight);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--tutorial-highlight);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 130, 201, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 130, 201, 0);
+  }
+}
+
+/* Tooltip styles */
+.tutorial-tooltip {
+  position: absolute;
+  background-color: var(--tooltip-bg);
+  color: var(--text-light);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  max-width: 250px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.tutorial-tooltip::after {
+  content: "";
+  position: absolute;
+  border-style: solid;
+  border-width: 8px;
+}
+
+.tutorial-tooltip.top::after {
+  border-color: var(--tooltip-bg) transparent transparent transparent;
+  top: 100%;
+  left: 50%;
+  margin-left: -8px;
+}
+
+.tutorial-tooltip.bottom::after {
+  border-color: transparent transparent var(--tooltip-bg) transparent;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -8px;
+}
+
+.tutorial-tooltip.left::after {
+  border-color: transparent transparent transparent var(--tooltip-bg);
+  top: 50%;
+  left: 100%;
+  margin-top: -8px;
+}
+
+.tutorial-tooltip.right::after {
+  border-color: transparent var(--tooltip-bg) transparent transparent;
+  top: 50%;
+  right: 100%;
+  margin-top: -8px;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   header {
@@ -290,5 +502,19 @@ footer {
   
   .api-status {
     margin-bottom: 0.5rem;
+  }
+  
+  .tutorial-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .tutorial-footer {
+    padding: 0.75rem 1rem;
+  }
+  
+  #tutorial-prev, #tutorial-next {
+    min-width: 80px;
+    padding: 0.5rem;
   }
 }

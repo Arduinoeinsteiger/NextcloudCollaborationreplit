@@ -14,19 +14,10 @@ import sys
 # Füge eine Ausgabe für Debugging hinzu
 print(f"Running setup.py with Python {sys.version}")
 
-# Alle Package-Namen manuell angeben, um Konflikte zu vermeiden
-packages = [
-    "swissairdry", 
-    "swissairdry.api", 
-    "swissairdry.api.app",
-    "swissairdry.api.app.routers",
-    "swissairdry.api.app.routes",
-    "swissairdry.db",
-    "swissairdry.integration",
-    "swissairdry.integration.deck",
-    "swissairdry.mqtt",
-    "swissairdry.nextcloud"
-]
+# Pakete automatisch finden
+from setuptools import find_packages
+
+packages = find_packages(include=["swissairdry", "swissairdry.*"])
 
 setup(
     name="swissairdry",

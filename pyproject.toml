@@ -3,18 +3,8 @@ requires = ["setuptools>=42,<60.0.0", "wheel>=0.37.0", "build>=0.7.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = [
-    "swissairdry", 
-    "swissairdry.api", 
-    "swissairdry.api.app",
-    "swissairdry.api.app.routers",
-    "swissairdry.api.app.routes",
-    "swissairdry.db",
-    "swissairdry.integration",
-    "swissairdry.integration.deck",
-    "swissairdry.mqtt",
-    "swissairdry.nextcloud"
-]
+packages = { find = { include = ["swissairdry", "swissairdry.*"] } }
+package-dir = { "" = "." }
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.yml", "*.md", "*.txt", "*.html", "*.css", "*.js"]

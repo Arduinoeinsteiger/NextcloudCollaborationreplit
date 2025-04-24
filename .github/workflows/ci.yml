@@ -200,15 +200,29 @@ jobs:
             dir=$(dirname "$composerfile")
             cd "$dir" || continue
             
-            # Validiere und installiere
-            composer validate --no-check-all || true
-            composer install --prefer-dist --no-progress --no-interaction || echo "Composer install failed for $dir, but continuing"
+            # Prüfen, ob die Datei leer oder fehlerhaft ist
+            if [ ! -s "composer.json" ]; then
+              echo "composer.json in $dir ist leer, wird übersprungen"
+              cd - > /dev/null || exit
+              continue
+            fi
+            
+            # Validiere Syntax ohne strenge Prüfungen
+            composer validate --no-check-all --no-check-publish || {
+              echo "Validierungsfehler in $dir/composer.json, aber Build wird fortgesetzt"
+              # Syntax-Fehler anzeigen, aber nicht fehlschlagen lassen
+            }
+            
+            # Versuche zu installieren, aber überspringe bei Fehlern
+            composer install --prefer-dist --no-progress --no-interaction || {
+              echo "Composer install fehlgeschlagen für $dir, aber wird fortgesetzt"
+            }
             
             # Führe Tests aus, falls vorhanden
             if [ -f "vendor/bin/phpunit" ]; then
               vendor/bin/phpunit || echo "PHP tests failed for $dir, but continuing"
             else
-              echo "PHPUnit not found in $dir, skipping tests"
+              echo "PHPUnit nicht gefunden in $dir, Tests werden übersprungen"
             fi
             
             cd - > /dev/null || exit

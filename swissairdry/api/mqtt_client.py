@@ -32,7 +32,8 @@ class MQTTClient:
         host: str = "localhost", 
         port: int = 1883, 
         username: str = "", 
-        password: str = ""
+        password: str = "",
+        client_id: str = None
     ):
         """
         Initialisiert den MQTT-Client.
@@ -42,6 +43,7 @@ class MQTTClient:
             port: MQTT-Broker-Port
             username: MQTT-Benutzername (optional)
             password: MQTT-Passwort (optional)
+            client_id: MQTT-Client-ID (optional, wird automatisch generiert wenn nicht angegeben)
         """
         self.host = host
         self.port = port
@@ -64,8 +66,13 @@ class MQTTClient:
             return False
         
         try:
-            # Client erstellen
-            self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+            # Client erstellen mit Client-ID wenn angegeben
+            import uuid
+            import time
+            # Generiere einzigartige Client-ID, wenn keine angegeben wurde
+            client_id_to_use = client_id if client_id else f"sard-{str(uuid.uuid4())[0:8]}-{int(time.time())}"
+            self.logger.info(f"Verwende MQTT-Client-ID: {client_id_to_use}")
+            self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id_to_use)
             
             # Callbacks setzen
             self.client.on_connect = self._on_connect

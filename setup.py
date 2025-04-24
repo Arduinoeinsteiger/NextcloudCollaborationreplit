@@ -35,7 +35,9 @@ setup(
     author="Swiss Air Dry Team",
     author_email="info@swissairdry.com",
     packages=packages,  # Verwende die explizit definierte Package-Liste
+    package_dir={"": "."},  # Root-Verzeichnis explizit angeben
     python_requires=">=3.9",
+    include_package_data=True,  # Auch Nicht-Python-Dateien einbeziehen
     install_requires=[
         "aiofiles>=0.8.0",
         "bcrypt>=3.2.0",

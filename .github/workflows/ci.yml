@@ -17,6 +17,7 @@ jobs:
   code-quality:
     name: Code-Qualität prüfen
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Setze Zeitlimit für diesen Job
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -211,7 +212,9 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install setuptools<60.0.0 wheel build twine
+          python -m pip install "setuptools<60.0.0" wheel build twine
+          # Debug: Anzeigen der installierten Versionen
+          pip list | grep -E 'setuptools|wheel|build|twine'
       
       - name: Fix package directories
         run: |
@@ -230,7 +233,17 @@ jobs:
       
       - name: Build package
         run: |
-          python -m build --sdist --wheel
+          # Debug-Informationen vor dem Build
+          echo "=== DEBUG: Verzeichnisstruktur ==="
+          find swissairdry -type d | sort
+          echo "=== DEBUG: __init__.py Dateien ==="
+          find swissairdry -name "__init__.py" | sort
+          echo "=== DEBUG: Konfigurationsdateien ==="
+          cat pyproject.toml || echo "pyproject.toml nicht gefunden"
+          cat setup.py || echo "setup.py nicht gefunden"
+
+          # Build mit Fehlerausgabe
+          python -m build --sdist --wheel -v
       
       - name: Check package with twine
         run: |

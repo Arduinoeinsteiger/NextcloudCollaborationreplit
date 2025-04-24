@@ -11,11 +11,20 @@ import os
 import json
 import asyncio
 import logging
+import uuid
+import time
+import random
+import string
 from typing import Dict, Any, Callable, Optional, List
 
 # Verwende die MQTT-Bibliothek, die mit den meisten Python-Versionen funktioniert
 try:
     import paho.mqtt.client as mqtt
+    # Definiere Konstanten, die in allen paho-mqtt-Versionen verfügbar sein sollten
+    MQTT_ERR_SUCCESS = 0
+    # Wenn MQTT-Konstanten nicht definiert sind, definieren wir sie selbst
+    if not hasattr(mqtt, 'MQTT_ERR_SUCCESS'):
+        mqtt.MQTT_ERR_SUCCESS = MQTT_ERR_SUCCESS
 except ImportError:
     # Wenn die Bibliothek nicht installiert ist, ein Mock-Objekt erstellen
     mqtt = None
@@ -67,26 +76,41 @@ class MQTTClient:
             return False
         
         try:
-            # Client erstellen mit Client-ID wenn angegeben
-            import uuid
-            import time
-            # Verwende die im Konstruktor übergebene oder generiere eine neue Client-ID
-            self.client_id = self.user_client_id if self.user_client_id else f"sard-{str(uuid.uuid4())[0:8]}-{int(time.time())}"
-            self.logger.info(f"Verwende MQTT-Client-ID: {self.client_id}")
+            # Einzigartige Client-ID generieren, die zu 100% keine Konflikte verursacht
+            if self.user_client_id:
+                # Nutze die übergebene Client-ID und füge einen Zufallswert hinzu
+                unique_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+                timestamp = int(time.time())
+                self.client_id = f"{self.user_client_id}-{unique_suffix}-{timestamp}"
+            else:
+                # Generiere eine vollständig zufällige Client-ID
+                unique_id = str(uuid.uuid4()).replace('-', '')[:8]
+                timestamp = int(time.time() * 1000)  # Millisekunden für noch mehr Einzigartigkeit
+                random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+                self.client_id = f"sard-{unique_id}-{timestamp}-{random_suffix}"
             
-            # Client initialisieren - API-Version ist seit 2.0.0 verfügbar, prüfen wir darauf
-            # Vereinfachte Version des Client-Constructors, die mit allen paho-mqtt-Versionen kompatibel ist
+            self.logger.info(f"Sichere MQTT-Client-ID generiert: {self.client_id}")
+            
+            # Client sicher initialisieren - mit Fallbacks für alle paho-mqtt-Versionen
             try:
                 # Neuer Stil mit API-Version (paho-mqtt >= 2.0.0)
                 if hasattr(mqtt, 'CallbackAPIVersion'):
                     self.client = mqtt.Client(client_id=self.client_id, callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
-                # Alter Stil ohne API-Version (paho-mqtt < 2.0.0)
+                    self.logger.debug("MQTT-Client mit CallbackAPIVersion.VERSION1 erstellt")
+                # Alter Stil ohne API-Version (paho-mqtt < 2.0.0) 
                 else:
                     self.client = mqtt.Client(client_id=self.client_id)
-            except TypeError as e:
-                self.logger.warning(f"Fehler beim Erstellen des MQTT-Clients: {e}")
-                # Absoluter Fallback ohne Parameter, falls alles andere fehlschlägt
-                self.client = mqtt.Client()
+                    self.logger.debug("MQTT-Client mit Standard-API erstellt")
+            except (TypeError, AttributeError) as e:
+                self.logger.warning(f"Fehler bei API-Version, verwende Fallback: {e}")
+                try:
+                    # Fallback ohne API-Version
+                    self.client = mqtt.Client(client_id=self.client_id)
+                    self.logger.debug("MQTT-Client mit Fallback erstellt")
+                except Exception as e2:
+                    # Letzter Ausweg: Client ohne Parameter
+                    self.logger.error(f"Fallback fehlgeschlagen: {e2}, letzter Versuch ohne Parameter")
+                    self.client = mqtt.Client()
             
             # Callbacks setzen
             self.client.on_connect = self._on_connect
@@ -98,23 +122,34 @@ class MQTTClient:
                 self.client.username_pw_set(self.username, self.password)
             
             # Verbindung herstellen
+            self.logger.info(f"MQTT-Verbindung wird hergestellt mit {self.host}:{self.port}")
             self.client.connect_async(self.host, self.port, 60)
             
             # Client in eigener Thread starten
             self.client.loop_start()
             
-            # Warte auf Verbindung
-            for _ in range(10):  # 10 Sekunden Timeout
-                if self.connected:
-                    self.logger.info(f"Verbunden mit MQTT-Broker {self.host}:{self.port}")
-                    return True
-                await asyncio.sleep(1)
+            # Warte auf Verbindung mit exponentieller Backoff-Strategie
+            # für robustere Verbindungsaufnahme
+            wait_time = 0.5  # Start mit 500ms
+            total_wait = 0
+            max_wait = 15  # Maximal 15 Sekunden warten
             
-            self.logger.error(f"Zeitüberschreitung bei der Verbindung zum MQTT-Broker {self.host}:{self.port}")
+            while total_wait < max_wait:
+                if self.connected:
+                    self.logger.info(f"MQTT-Client verbunden mit {self.host}:{self.port}")
+                    return True
+                
+                await asyncio.sleep(wait_time)
+                total_wait += wait_time
+                wait_time = min(wait_time * 1.5, 2.0)  # Exponentiell erhöhen, max 2s
+            
+            # Wenn wir hierher gelangen, ist die Verbindung fehlgeschlagen
+            self.client.loop_stop()
+            self.logger.error(f"Zeitüberschreitung bei der MQTT-Verbindung nach {total_wait:.1f}s")
             return False
             
         except Exception as e:
-            self.logger.error(f"Fehler bei der MQTT-Verbindung: {e}")
+            self.logger.error(f"Kritischer Fehler bei der MQTT-Verbindung: {str(e)}")
             return False
     
     async def disconnect(self) -> None:
@@ -264,10 +299,16 @@ class MQTTClient:
         Wird aufgerufen, wenn der Client die Verbindung zum Broker verliert.
         """
         self.connected = False
-        if rc != 0:
-            self.logger.warning(f"Unerwartete Trennung vom MQTT-Broker mit Code {rc}")
+        
+        if rc == 0:
+            self.logger.info("MQTT-Verbindung normal getrennt")
+        elif rc == 7:  # Client-ID wird bereits verwendet
+            self.logger.warning(f"MQTT-Verbindung nicht autorisiert (Code {rc}), Client-ID-Konflikt möglich")
+            # Könnte hier automatische Wiederverbindung mit neuer ID implementieren
         else:
-            self.logger.info("Vom MQTT-Broker getrennt")
+            self.logger.warning(f"Unerwartete Trennung vom MQTT-Broker mit Code {rc}")
+            
+        self.logger.info("MQTT-Client getrennt")
     
     def _on_message(self, client, userdata, msg):
         """

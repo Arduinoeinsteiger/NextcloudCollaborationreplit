@@ -82,6 +82,15 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "mkdir -p /tmp/mosquitto/data /tmp/mosquitto/log && chmod -R 777 /tmp/mosquitto && mosquitto -c swissairdry/mqtt/mosquitto.conf"
 
+[[workflows.workflow]]
+name = "Run Tests"
+author = 7556255
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest"
+
 [deployment]
 run = ["sh", "-c", "cd docker-base-api/app && python run.py"]
 

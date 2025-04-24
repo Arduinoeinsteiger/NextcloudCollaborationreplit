@@ -1,0 +1,941 @@
+/**
+ * SwissAirDry Nextcloud ExApp Stylesheet
+ */
+
+:root {
+  /* Hauptfarben */
+  --sard-primary: #0082c9;
+  --sard-secondary: #007cc3;
+  --sard-success: #46ba61;
+  --sard-warning: #e9b414;
+  --sard-danger: #e9414a;
+  --sard-info: #0082c9;
+  
+  /* Neutrale Farben */
+  --sard-gray-100: #f5f7fa;
+  --sard-gray-200: #e6e8ed;
+  --sard-gray-300: #cfd3db;
+  --sard-gray-400: #b3b9c4;
+  --sard-gray-500: #868e9e;
+  --sard-gray-600: #6a707b;
+  --sard-gray-700: #4d545e;
+  --sard-gray-800: #313438;
+  --sard-gray-900: #1e2124;
+  
+  /* Abstände */
+  --sard-space-xs: 4px;
+  --sard-space-sm: 8px;
+  --sard-space-md: 16px;
+  --sard-space-lg: 24px;
+  --sard-space-xl: 32px;
+  
+  /* Abrundungen */
+  --sard-radius-sm: 4px;
+  --sard-radius-md: 8px;
+  --sard-radius-lg: 12px;
+  
+  /* Schatten */
+  --sard-shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  --sard-shadow-md: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+  --sard-shadow-lg: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  
+  /* Status-Farben */
+  --sard-status-online: var(--sard-success);
+  --sard-status-offline: var(--sard-gray-500);
+  --sard-status-warning: var(--sard-warning);
+  --sard-status-error: var(--sard-danger);
+}
+
+/* Nextcloud Dark Mode Anpassungen */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sard-gray-100: #1e2124;
+    --sard-gray-200: #313438;
+    --sard-gray-300: #4d545e;
+    --sard-gray-400: #6a707b;
+    --sard-gray-500: #868e9e;
+    --sard-gray-600: #b3b9c4;
+    --sard-gray-700: #cfd3db;
+    --sard-gray-800: #e6e8ed;
+    --sard-gray-900: #f5f7fa;
+  }
+}
+
+/* ========== Grundlegende Elemente ========== */
+
+/* App-Container */
+.sard-app-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Seitenleiste */
+.sard-sidebar {
+  width: 240px;
+  height: 100%;
+  background-color: var(--sard-gray-100);
+  border-right: 1px solid var(--sard-gray-200);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Logo-Bereich */
+.sard-logo {
+  padding: var(--sard-space-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-logo img {
+  max-width: 100%;
+  height: 40px;
+}
+
+/* Navigation */
+.sard-navigation {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sard-navigation ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sard-nav-link {
+  display: flex;
+  align-items: center;
+  padding: var(--sard-space-md);
+  color: var(--sard-gray-700);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sard-nav-link:hover {
+  background-color: var(--sard-gray-200);
+  color: var(--sard-primary);
+}
+
+.sard-nav-link.active {
+  background-color: rgba(0, 130, 201, 0.1);
+  color: var(--sard-primary);
+  border-left: 4px solid var(--sard-primary);
+}
+
+.sard-nav-link span[class^="icon-"] {
+  margin-right: var(--sard-space-md);
+  font-size: 18px;
+}
+
+/* API Status */
+.sard-api-status {
+  padding: var(--sard-space-md);
+  border-top: 1px solid var(--sard-gray-200);
+  display: flex;
+  align-items: center;
+}
+
+.sard-status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: var(--sard-space-sm);
+}
+
+.sard-status-indicator.online {
+  background-color: var(--sard-status-online);
+}
+
+.sard-status-indicator.offline {
+  background-color: var(--sard-status-offline);
+}
+
+.sard-status-text {
+  font-size: 14px;
+  color: var(--sard-gray-600);
+}
+
+/* Inhaltsbereich */
+.sard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header-Bereich */
+.sard-header {
+  padding: var(--sard-space-md) var(--sard-space-lg);
+  border-bottom: 1px solid var(--sard-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sard-view-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.sard-actions {
+  display: flex;
+  gap: var(--sard-space-sm);
+}
+
+/* View-Container */
+.sard-view-container {
+  flex: 1;
+  padding: var(--sard-space-lg);
+  overflow-y: auto;
+}
+
+/* ========== Komponenten ========== */
+
+/* Karten */
+.sard-card {
+  background-color: #fff;
+  border-radius: var(--sard-radius-md);
+  box-shadow: var(--sard-shadow-sm);
+  margin-bottom: var(--sard-space-lg);
+  overflow: hidden;
+}
+
+.sard-card-header {
+  padding: var(--sard-space-md) var(--sard-space-lg);
+  border-bottom: 1px solid var(--sard-gray-200);
+}
+
+.sard-card-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sard-card-content {
+  padding: var(--sard-space-lg);
+}
+
+/* Dashboard */
+.sard-dashboard-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sard-space-lg);
+  margin-bottom: var(--sard-space-lg);
+}
+
+.sard-stat-box {
+  text-align: center;
+  padding: var(--sard-space-md);
+}
+
+.sard-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: var(--sard-space-sm);
+  color: var(--sard-primary);
+}
+
+.sard-stat-label {
+  font-size: 14px;
+  color: var(--sard-gray-600);
+}
+
+.sard-api-connections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sard-space-md);
+}
+
+.sard-connection-item {
+  display: flex;
+  align-items: center;
+  padding: var(--sard-space-md);
+  background-color: var(--sard-gray-100);
+  border-radius: var(--sard-radius-sm);
+}
+
+.sard-connection-label {
+  margin-right: var(--sard-space-sm);
+  font-weight: 600;
+}
+
+.sard-connection-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.sard-connection-status.online {
+  background-color: rgba(70, 186, 97, 0.2);
+  color: var(--sard-status-online);
+}
+
+.sard-connection-status.offline {
+  background-color: rgba(134, 142, 158, 0.2);
+  color: var(--sard-status-offline);
+}
+
+/* Alarm-Liste */
+.sard-alarm-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sard-alarm-item {
+  display: flex;
+  align-items: center;
+  padding: var(--sard-space-md);
+  border-bottom: 1px solid var(--sard-gray-200);
+}
+
+.sard-alarm-item:last-child {
+  border-bottom: none;
+}
+
+.sard-alarm-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(233, 65, 74, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--sard-space-md);
+  flex-shrink: 0;
+}
+
+.sard-alarm-icon.temperature {
+  background-color: rgba(233, 65, 74, 0.2);
+}
+
+.sard-alarm-icon.humidity {
+  background-color: rgba(0, 130, 201, 0.2);
+}
+
+.sard-alarm-icon.connectivity {
+  background-color: rgba(233, 180, 20, 0.2);
+}
+
+.sard-alarm-icon.battery {
+  background-color: rgba(233, 65, 74, 0.2);
+}
+
+.sard-alarm-icon span {
+  color: var(--sard-danger);
+  font-size: 20px;
+}
+
+.sard-alarm-details {
+  flex: 1;
+}
+
+.sard-alarm-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.sard-alarm-device {
+  font-size: 14px;
+  color: var(--sard-gray-600);
+  margin-bottom: 2px;
+}
+
+.sard-alarm-time {
+  font-size: 12px;
+  color: var(--sard-gray-500);
+}
+
+.sard-see-all {
+  text-align: center;
+  margin-top: var(--sard-space-md);
+}
+
+.sard-see-all a {
+  color: var(--sard-primary);
+  text-decoration: none;
+}
+
+/* Geräte-Ansicht */
+.sard-device-filters {
+  display: flex;
+  gap: var(--sard-space-md);
+  margin-bottom: var(--sard-space-lg);
+  flex-wrap: wrap;
+}
+
+.sard-search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid var(--sard-gray-300);
+  border-radius: var(--sard-radius-sm);
+}
+
+.sard-filter-group {
+  display: flex;
+  align-items: center;
+}
+
+.sard-filter-group label {
+  margin-right: var(--sard-space-sm);
+}
+
+.sard-filter-select {
+  padding: 8px 12px;
+  border: 1px solid var(--sard-gray-300);
+  border-radius: var(--sard-radius-sm);
+}
+
+.sard-device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sard-space-lg);
+}
+
+.sard-device-card {
+  background-color: #fff;
+  border-radius: var(--sard-radius-md);
+  box-shadow: var(--sard-shadow-sm);
+  overflow: hidden;
+}
+
+.sard-device-header {
+  padding: var(--sard-space-md);
+  background-color: var(--sard-primary);
+  color: white;
+}
+
+.sard-device-header.status-online {
+  background-color: var(--sard-status-online);
+}
+
+.sard-device-header.status-offline {
+  background-color: var(--sard-status-offline);
+}
+
+.sard-device-header.status-warning {
+  background-color: var(--sard-status-warning);
+}
+
+.sard-device-header.status-error {
+  background-color: var(--sard-status-error);
+}
+
+.sard-device-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sard-device-id {
+  font-size: 12px;
+  opacity: 0.8;
+  display: block;
+}
+
+.sard-device-content {
+  padding: var(--sard-space-md);
+}
+
+.sard-device-status {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: var(--sard-space-sm);
+}
+
+.sard-status-dot.status-online {
+  background-color: var(--sard-status-online);
+}
+
+.sard-status-dot.status-offline {
+  background-color: var(--sard-status-offline);
+}
+
+.sard-status-dot.status-warning {
+  background-color: var(--sard-status-warning);
+}
+
+.sard-status-dot.status-error {
+  background-color: var(--sard-status-error);
+}
+
+.sard-device-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sard-space-md);
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-metric {
+  display: flex;
+  align-items: center;
+  background-color: var(--sard-gray-100);
+  padding: 4px 8px;
+  border-radius: var(--sard-radius-sm);
+  font-size: 14px;
+}
+
+.sard-metric-icon {
+  margin-right: 4px;
+}
+
+.sard-device-last-seen {
+  font-size: 12px;
+  color: var(--sard-gray-500);
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-device-actions {
+  padding: var(--sard-space-md);
+  border-top: 1px solid var(--sard-gray-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sard-space-sm);
+}
+
+/* Alarme */
+.sard-alarm-card {
+  display: flex;
+  background-color: #fff;
+  border-radius: var(--sard-radius-md);
+  box-shadow: var(--sard-shadow-sm);
+  margin-bottom: var(--sard-space-md);
+  overflow: hidden;
+  border-left: 4px solid var(--sard-danger);
+}
+
+.sard-alarm-card.severity-critical {
+  border-left-color: var(--sard-danger);
+}
+
+.sard-alarm-card.severity-high {
+  border-left-color: #e97e14;
+}
+
+.sard-alarm-card.severity-medium {
+  border-left-color: var(--sard-warning);
+}
+
+.sard-alarm-card.severity-low {
+  border-left-color: var(--sard-info);
+}
+
+.sard-alarm-info {
+  flex: 1;
+  padding: var(--sard-space-md);
+}
+
+.sard-alarm-title {
+  margin: 0 0 var(--sard-space-sm) 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sard-alarm-description {
+  margin-bottom: var(--sard-space-sm);
+}
+
+.sard-alarm-device, .sard-alarm-time {
+  font-size: 12px;
+  color: var(--sard-gray-500);
+  margin-bottom: 2px;
+}
+
+.sard-alarm-actions {
+  padding: var(--sard-space-md);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sard-space-sm);
+}
+
+/* Buttons */
+.sard-btn {
+  padding: 8px 12px;
+  border-radius: var(--sard-radius-sm);
+  border: 1px solid var(--sard-gray-300);
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.sard-btn:hover {
+  background-color: var(--sard-gray-100);
+  border-color: var(--sard-gray-400);
+}
+
+.sard-btn-primary {
+  background-color: var(--sard-primary);
+  color: white;
+  border-color: var(--sard-primary);
+}
+
+.sard-btn-primary:hover {
+  background-color: var(--sard-secondary);
+  border-color: var(--sard-secondary);
+}
+
+.sard-refresh-btn {
+  background: none;
+  border: none;
+  color: var(--sard-gray-600);
+  cursor: pointer;
+  padding: var(--sard-space-sm);
+}
+
+.sard-refresh-btn:hover {
+  color: var(--sard-primary);
+}
+
+/* Einstellungen */
+.sard-settings-form {
+  margin-bottom: var(--sard-space-lg);
+}
+
+.sard-form-group {
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-form-group label {
+  display: block;
+  margin-bottom: var(--sard-space-sm);
+  font-weight: 600;
+}
+
+.sard-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--sard-gray-300);
+  border-radius: var(--sard-radius-sm);
+}
+
+.sard-form-actions {
+  display: flex;
+  gap: var(--sard-space-sm);
+  justify-content: flex-start;
+}
+
+.sard-integration-status {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-status-label {
+  font-weight: 600;
+  margin-right: var(--sard-space-sm);
+}
+
+.sard-status-value {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.sard-status-value.online {
+  background-color: rgba(70, 186, 97, 0.2);
+  color: var(--sard-status-online);
+}
+
+.sard-status-value.offline {
+  background-color: rgba(134, 142, 158, 0.2);
+  color: var(--sard-status-offline);
+}
+
+/* Modals */
+.sard-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.sard-modal-content {
+  background-color: #fff;
+  border-radius: var(--sard-radius-md);
+  box-shadow: var(--sard-shadow-lg);
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sard-modal-header {
+  padding: var(--sard-space-md) var(--sard-space-lg);
+  border-bottom: 1px solid var(--sard-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sard-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.sard-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--sard-gray-600);
+}
+
+.sard-modal-body {
+  padding: var(--sard-space-lg);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sard-modal-footer {
+  padding: var(--sard-space-md) var(--sard-space-lg);
+  border-top: 1px solid var(--sard-gray-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sard-space-md);
+}
+
+/* Gerätedetails */
+.sard-device-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sard-space-lg);
+}
+
+.sard-detail-section h3 {
+  margin-top: 0;
+  margin-bottom: var(--sard-space-md);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sard-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sard-detail-table th, .sard-detail-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--sard-gray-200);
+}
+
+.sard-detail-table th {
+  font-weight: 600;
+  width: 30%;
+}
+
+.sard-sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--sard-space-md);
+}
+
+.sard-sensor-card {
+  background-color: var(--sard-gray-100);
+  border-radius: var(--sard-radius-md);
+  padding: var(--sard-space-md);
+  text-align: center;
+}
+
+.sard-sensor-icon {
+  font-size: 24px;
+  margin-bottom: var(--sard-space-sm);
+  color: var(--sard-primary);
+}
+
+.sard-sensor-value {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.sard-sensor-label {
+  font-size: 12px;
+  color: var(--sard-gray-600);
+}
+
+/* Benachrichtigungen */
+.sard-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 400px;
+  background-color: #fff;
+  border-radius: var(--sard-radius-md);
+  box-shadow: var(--sard-shadow-md);
+  transform: translateX(120%);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 9999;
+}
+
+.sard-notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.sard-notification.hide {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.sard-notification-content {
+  display: flex;
+  padding: var(--sard-space-md);
+}
+
+.sard-notification-icon {
+  margin-right: var(--sard-space-md);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.sard-notification-success .sard-notification-icon {
+  color: var(--sard-success);
+}
+
+.sard-notification-error .sard-notification-icon {
+  color: var(--sard-danger);
+}
+
+.sard-notification-warning .sard-notification-icon {
+  color: var(--sard-warning);
+}
+
+.sard-notification-info .sard-notification-icon {
+  color: var(--sard-info);
+}
+
+.sard-notification-message {
+  flex: 1;
+}
+
+.sard-notification-close {
+  cursor: pointer;
+  margin-left: var(--sard-space-md);
+  font-size: 16px;
+  color: var(--sard-gray-500);
+}
+
+/* Zustände */
+.sard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sard-space-xl);
+  color: var(--sard-gray-600);
+}
+
+.sard-loading span.icon-loading {
+  font-size: 32px;
+  margin-bottom: var(--sard-space-md);
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sard-empty-state {
+  text-align: center;
+  padding: var(--sard-space-xl);
+  color: var(--sard-gray-500);
+}
+
+.sard-error {
+  text-align: center;
+  padding: var(--sard-space-xl);
+  color: var(--sard-danger);
+}
+
+.sard-error h2 {
+  margin-top: 0;
+  margin-bottom: var(--sard-space-md);
+}
+
+.sard-error .sard-retry-btn {
+  margin-top: var(--sard-space-md);
+}
+
+.sard-no-metrics {
+  font-size: 14px;
+  color: var(--sard-gray-500);
+  text-align: center;
+  padding: var(--sard-space-sm);
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 768px) {
+  .sard-app-container {
+    flex-direction: column;
+  }
+  
+  .sard-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--sard-gray-200);
+  }
+  
+  .sard-navigation {
+    display: flex;
+    overflow-x: auto;
+  }
+  
+  .sard-navigation ul {
+    display: flex;
+    flex-wrap: nowrap;
+  }
+  
+  .sard-nav-link {
+    white-space: nowrap;
+  }
+  
+  .sard-dashboard-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .sard-device-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .sard-alarm-card {
+    flex-direction: column;
+  }
+  
+  .sard-alarm-actions {
+    flex-direction: row;
+    padding-top: 0;
+  }
+}

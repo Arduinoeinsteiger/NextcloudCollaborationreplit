@@ -16,6 +16,9 @@ packages = [
     "swissairdry.nextcloud"
 ]
 
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yaml", "*.yml", "*.md", "*.txt", "*.html", "*.css", "*.js"]
+
 [project]
 name = "swissairdry"
 version = "0.1.0"

@@ -152,6 +152,11 @@ class SwissAirDryDeckIntegration:
         Returns:
             bool: True, wenn die Karte erstellt wurde, sonst False
         """
+        # Board ID-Prüfung
+        if self.board_id is None:
+            self.logger.error("Board ID ist None, Karte kann nicht erstellt werden")
+            return False
+            
         # Stack anhand des Status bestimmen
         stack_name = "Aktive Aufträge" if status == "Aktiv" else "Abgeschlossene Aufträge"
         stack_id = self.stacks.get(stack_name)
@@ -173,17 +178,20 @@ class SwissAirDryDeckIntegration:
         full_description += f"\n\n_Erstellt: {datetime.now().strftime('%d.%m.%Y %H:%M')}_"
         
         try:
-            # Karte erstellen
+            # Karte erstellen mit benannten Parametern für bessere Typprüfung
+            board_id_int = int(self.board_id)  # Explizite Typkonvertierung
+            stack_id_int = int(stack_id)       # Explizite Typkonvertierung
+            
             card = self.client.create_card(
-                self.board_id,
-                stack_id,
-                title,
-                full_description
+                board_id=board_id_int,
+                stack_id=stack_id_int,
+                title=title,
+                description=full_description
             )
             self.logger.info(f"Auftragskarte erstellt: {card['id']} - {title}")
             return True
             
-        except DeckAPIException as e:
+        except (DeckAPIException, ValueError, TypeError) as e:
             self.logger.error(f"Fehler beim Erstellen der Auftragskarte: {e}")
             return False
     
@@ -206,6 +214,11 @@ class SwissAirDryDeckIntegration:
         Returns:
             bool: True, wenn die Karte erstellt wurde, sonst False
         """
+        # Board ID-Prüfung
+        if self.board_id is None:
+            self.logger.error("Board ID ist None, Karte kann nicht erstellt werden")
+            return False
+            
         stack_id = self.stacks.get("Alarme")
         
         if not stack_id:
@@ -229,16 +242,19 @@ class SwissAirDryDeckIntegration:
         )
         
         try:
-            # Karte erstellen
+            # Karte erstellen mit benannten Parametern für bessere Typprüfung
+            board_id_int = int(self.board_id)  # Explizite Typkonvertierung
+            stack_id_int = int(stack_id)       # Explizite Typkonvertierung
+            
             card = self.client.create_card(
-                self.board_id,
-                stack_id,
-                title,
-                full_description
+                board_id=board_id_int,
+                stack_id=stack_id_int,
+                title=title,
+                description=full_description
             )
             self.logger.info(f"Alarmkarte erstellt: {card['id']} - {title}")
             return True
             
-        except DeckAPIException as e:
+        except (DeckAPIException, ValueError, TypeError) as e:
             self.logger.error(f"Fehler beim Erstellen der Alarmkarte: {e}")
             return False

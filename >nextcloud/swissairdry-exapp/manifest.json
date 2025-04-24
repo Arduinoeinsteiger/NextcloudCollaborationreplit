@@ -1,0 +1,65 @@
+{
+  "id": "swissairdry",
+  "name": "Swiss Air Dry",
+  "version": "1.0.0",
+  "description": "IoT-Geräteverwaltung für Trocknungsgeräte - Eine umfassende Lösung zur Überwachung und Verwaltung von Trocknungsgeräten für die Baubranche.",
+  "homepage": "https://swissairdry.com",
+  "authors": [
+    {
+      "name": "SwissAirDry Team",
+      "email": "info@swissairdry.com",
+      "homepage": "https://swissairdry.com"
+    }
+  ],
+  "category": "monitoring",
+  "bugs": {
+    "url": "https://github.com/swissairdry/swissairdry/issues"
+  },
+  "repository": {
+    "url": "https://github.com/swissairdry/swissairdry.git",
+    "type": "git"
+  },
+  "license": "AGPL-3.0-or-later",
+  "min-nextcloud-version": "26",
+  "max-nextcloud-version": "27",
+  "screenshot": "https://raw.githubusercontent.com/swissairdry/swissairdry/main/screenshots/dashboard.png",
+  "app-type": "app",
+  "web-app": {
+    "enabled": true,
+    "main-vue-component": "src/App.vue",
+    "build-dir": "dist"
+  },
+  "main-url": "/index.html",
+  "resources": {
+    "dashboard": {
+      "type": "external",
+      "url": "/index.html#dashboard",
+      "title": "Swiss Air Dry Dashboard",
+      "icon": "img/swissairdry-logo.svg"
+    },
+    "devices": {
+      "type": "external",
+      "url": "/index.html#devices",
+      "title": "Geräteübersicht",
+      "icon": "img/swissairdry-logo.svg"
+    },
+    "alarms": {
+      "type": "external",
+      "url": "/index.html#alarms",
+      "title": "Alarme & Warnungen",
+      "icon": "img/swissairdry-logo.svg"
+    }
+  },
+  "external-apps": [
+    {
+      "name": "swissairdry-daemon",
+      "type": "daemon",
+      "command": {
+        "command": "python",
+        "args": ["daemon/daemon.py"]
+      },
+      "protocols": ["http"],
+      "ports": [8701]
+    }
+  ]
+}

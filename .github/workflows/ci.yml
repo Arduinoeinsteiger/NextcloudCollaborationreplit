@@ -35,6 +35,8 @@ jobs:
           if [ -f requirements-dev.txt ]; then
             pip install -r requirements-dev.txt
           fi
+          # Stellen wir explizit sicher, dass die aktuellsten Build-Tools verfügbar sind
+          pip install --upgrade build
       
       - name: Lint with flake8
         continue-on-error: true

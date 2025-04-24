@@ -67,7 +67,7 @@ class Device(DeviceBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+        # orm_mode has been renamed to from_attributes in Pydantic v2
 
 
 # --- Sensordaten-Schemas ---
@@ -96,7 +96,7 @@ class SensorData(SensorDataBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+        # orm_mode has been renamed to from_attributes in Pydantic v2
 
 
 class SensorDataResponse(BaseModel):

@@ -1,6 +1,5 @@
 """
-SwissAirDry Integration Paket
-----------------------------
+SwissAirDry Integrationsmodul
 
-Dieses Paket enthält verschiedene Integrationen für SwissAirDry mit externen Systemen.
+Dieses Modul enthält die Integrationsfunktionalität des SwissAirDry-Systems.
 """

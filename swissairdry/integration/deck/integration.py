@@ -1,344 +1,244 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """
-SwissAirDry Nextcloud Deck Integration
---------------------------------------
+SwissAirDry Integration - Nextcloud Deck Integration
+---------------------------------------------------
 
-Diese Datei enthält die Integrationslogik zwischen SwissAirDry und der Nextcloud Deck App.
-Sie stellt den Service bereit, der Aufträge, Geräte und Aufgaben mit Boards, Stacks und Karten
-in der Nextcloud Deck App synchronisiert.
+Diese Datei enthält die Integration mit der Nextcloud Deck App.
 """
 
 import os
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Any, Optional, Union
+from datetime import datetime
 
 from .client import DeckAPIClient, DeckAPIException
-
-# Logger konfigurieren
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("swissairdry_deck_integration")
 
 
 class SwissAirDryDeckIntegration:
     """
-    Integration zwischen SwissAirDry und Nextcloud Deck
+    Integration zwischen SwissAirDry und der Nextcloud Deck App
     
-    Diese Klasse orchestriert die Integration von SwissAirDry-Daten mit der Nextcloud Deck App.
-    Sie synchronisiert Aufträge, Geräte und Aufgaben mit Boards, Stacks und Karten in Deck.
+    Diese Klasse stellt Funktionen bereit, um SwissAirDry-Daten in Nextcloud Deck
+    zu visualisieren und zu verwalten.
     """
     
-    DEFAULT_STACKS = ["In Vorbereitung", "In Bearbeitung", "Abgeschlossen", "Probleme"]
-    STACK_COLORS = {
-        "In Vorbereitung": "0082c9",   # Blau
-        "In Bearbeitung": "ffa500",    # Orange
-        "Abgeschlossen": "49b675",     # Grün
-        "Probleme": "e9322d"           # Rot
-    }
-    
-    def __init__(self, nextcloud_url: str, username: str, password: str):
+    def __init__(
+        self,
+        base_url: str,
+        username: str,
+        password: str,
+        board_name: str = "SwissAirDry"
+    ):
         """
-        Initialisiere die SwissAirDry-Deck Integration
+        Initialisiert die SwissAirDry Deck Integration.
         
         Args:
-            nextcloud_url: Die Basis-URL der Nextcloud-Instanz
-            username: Benutzername für die Authentifizierung
-            password: Passwort oder App-Passwort für die Authentifizierung
+            base_url: Basis-URL der Nextcloud-Instanz
+            username: Nextcloud-Benutzername
+            password: Nextcloud-Passwort oder App-Passwort
+            board_name: Name des Boards für SwissAirDry-Daten
         """
-        self.deck_client = DeckAPIClient(nextcloud_url, username, password)
-        self.board_cache = {}  # Cache für Board-Daten
+        self.logger = logging.getLogger(__name__)
+        self.client = DeckAPIClient(base_url, username, password)
+        self.board_name = board_name
+        self.board_id = None
+        self.stacks = {}
         
-        # Prüfen, ob ein Hauptboard für SwissAirDry existiert, sonst anlegen
-        self.main_board_id = self._get_or_create_main_board()
-        logger.info(f"SwissAirDry Hauptboard ID: {self.main_board_id}")
-    
-    def _get_or_create_main_board(self) -> int:
+    async def initialize(self) -> bool:
         """
-        Hole oder erstelle das SwissAirDry Hauptboard
+        Initialisiert die Integration und stellt sicher, dass das Board und die Listen existieren.
         
         Returns:
-            Die ID des Hauptboards
+            bool: True, wenn die Initialisierung erfolgreich war, sonst False
         """
-        BOARD_TITLE = "SwissAirDry"
-        
-        # Alle Boards abrufen und nach dem SwissAirDry-Board suchen
-        boards = self.deck_client.get_all_boards()
-        for board in boards:
-            if board["title"] == BOARD_TITLE:
-                logger.info(f"Bestehendes SwissAirDry-Board gefunden: ID {board['id']}")
+        try:
+            # Board finden oder erstellen
+            self.board_id = await self._get_or_create_board()
+            if not self.board_id:
+                self.logger.error("Konnte kein Board erstellen oder finden")
+                return False
                 
-                # Standard-Stacks überprüfen und ggf. erstellen
-                self._ensure_default_stacks(board["id"])
-                
-                return board["id"]
-        
-        # Wenn nicht gefunden, neues Board erstellen
-        logger.info("Kein SwissAirDry-Board gefunden, erstelle ein neues...")
-        board = self.deck_client.create_board(BOARD_TITLE, color="0082c9")
-        board_id = board["id"]
-        
-        # Standard-Stacks erstellen
-        self._ensure_default_stacks(board_id)
-        
-        return board_id
+            # Standard-Listen erstellen
+            stack_names = ["Aktive Aufträge", "Abgeschlossene Aufträge", "Wartung", "Alarme"]
+            for name in stack_names:
+                stack_id = await self._get_or_create_stack(name)
+                if stack_id:
+                    self.stacks[name] = stack_id
+                    
+            self.logger.info(f"Deck Integration initialisiert: Board ID {self.board_id}, Listen: {len(self.stacks)}")
+            return True
+            
+        except DeckAPIException as e:
+            self.logger.error(f"Fehler bei der Initialisierung der Deck Integration: {e}")
+            return False
     
-    def _ensure_default_stacks(self, board_id: int) -> None:
+    async def _get_or_create_board(self) -> Optional[int]:
         """
-        Stelle sicher, dass alle Standard-Stacks im Board vorhanden sind
+        Findet oder erstellt ein Board für SwissAirDry.
+        
+        Returns:
+            Optional[int]: Board-ID oder None, wenn kein Board gefunden oder erstellt werden konnte
+        """
+        try:
+            # Alle Boards abrufen
+            boards = self.client.get_boards()
+            
+            # Nach SwissAirDry-Board suchen
+            for board in boards:
+                if board.get("title") == self.board_name:
+                    self.logger.info(f"Existierendes Board gefunden: {board['id']} - {self.board_name}")
+                    return board["id"]
+            
+            # Kein Board gefunden, neues erstellen
+            board = self.client.create_board(self.board_name, "0082c9")
+            self.logger.info(f"Neues Board erstellt: {board['id']} - {self.board_name}")
+            return board["id"]
+            
+        except DeckAPIException as e:
+            self.logger.error(f"Fehler beim Finden/Erstellen des Boards: {e}")
+            return None
+    
+    async def _get_or_create_stack(self, name: str) -> Optional[int]:
+        """
+        Findet oder erstellt eine Liste (Stack) im SwissAirDry-Board.
         
         Args:
-            board_id: ID des Boards
-        """
-        # Vorhandene Stacks abrufen
-        existing_stacks = self.deck_client.get_stacks(board_id)
-        existing_stack_titles = [stack["title"] for stack in existing_stacks]
-        
-        # Fehlende Stacks erstellen
-        for stack_title in self.DEFAULT_STACKS:
-            if stack_title not in existing_stack_titles:
-                logger.info(f"Erstelle Stack '{stack_title}' im Board {board_id}")
-                self.deck_client.create_stack(board_id, stack_title)
-    
-    def get_stack_id_by_title(self, board_id: int, title: str) -> Optional[int]:
-        """
-        Hole die ID eines Stacks anhand seines Titels
-        
-        Args:
-            board_id: ID des Boards
-            title: Titel des Stacks
+            name: Name der Liste
             
         Returns:
-            Die ID des Stacks oder None, wenn nicht gefunden
+            Optional[int]: Listen-ID oder None, wenn keine Liste gefunden oder erstellt werden konnte
         """
-        stacks = self.deck_client.get_stacks(board_id)
-        for stack in stacks:
-            if stack["title"] == title:
-                return stack["id"]
-        return None
+        if not self.board_id:
+            self.logger.error("Kein Board initialisiert")
+            return None
+            
+        try:
+            # Alle Listen des Boards abrufen
+            stacks = self.client.get_stacks(self.board_id)
+            
+            # Nach Liste mit angegebenem Namen suchen
+            for stack in stacks:
+                if stack.get("title") == name:
+                    self.logger.info(f"Existierende Liste gefunden: {stack['id']} - {name}")
+                    return stack["id"]
+            
+            # Keine Liste gefunden, neue erstellen
+            stack = self.client.create_stack(self.board_id, name)
+            self.logger.info(f"Neue Liste erstellt: {stack['id']} - {name}")
+            return stack["id"]
+            
+        except DeckAPIException as e:
+            self.logger.error(f"Fehler beim Finden/Erstellen der Liste: {e}")
+            return None
     
-    def create_job_board(self, job_id: str, job_title: str, customer_name: str) -> int:
+    async def create_job_card(
+        self,
+        job_id: str,
+        title: str,
+        description: str,
+        status: str = "Aktiv",
+        details: Optional[Dict[str, Any]] = None
+    ) -> bool:
         """
-        Erstelle ein neues Board für einen Auftrag
+        Erstellt eine Karte für einen Auftrag.
         
         Args:
-            job_id: ID des Auftrags
-            job_title: Titel des Auftrags
-            customer_name: Name des Kunden
+            job_id: Auftrags-ID
+            title: Titel des Auftrags
+            description: Beschreibung des Auftrags
+            status: Status des Auftrags ("Aktiv" oder "Abgeschlossen")
+            details: Weitere Details zum Auftrag
             
         Returns:
-            Die ID des erstellten Boards
+            bool: True, wenn die Karte erstellt wurde, sonst False
         """
-        board_title = f"{job_id} - {customer_name}"
-        board = self.deck_client.create_board(board_title, color="0082c9")
-        board_id = board["id"]
+        # Stack anhand des Status bestimmen
+        stack_name = "Aktive Aufträge" if status == "Aktiv" else "Abgeschlossene Aufträge"
+        stack_id = self.stacks.get(stack_name)
         
-        # Standard-Stacks für den Auftrag erstellen
-        self._ensure_default_stacks(board_id)
+        if not stack_id:
+            self.logger.error(f"Keine Liste für Status {status} gefunden")
+            return False
+            
+        # Beschreibung erweitern
+        full_description = f"**Auftrags-ID:** {job_id}\n\n{description}\n\n"
         
-        # Auftragsinformationen als Karte im Hauptboard hinzufügen
-        main_stack_id = self.get_stack_id_by_title(self.main_board_id, "In Vorbereitung")
-        if main_stack_id:
-            description = f"""
-# Auftrag: {job_title}
-* Kunde: {customer_name}
-* Auftragsnummer: {job_id}
-* Erstellt: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-
-[Zum Auftragsboard](../boards/{board_id})
-"""
-            self.deck_client.create_card(
-                self.main_board_id, 
-                main_stack_id, 
-                title=board_title, 
-                description=description
+        # Details hinzufügen, wenn vorhanden
+        if details:
+            full_description += "**Details:**\n\n"
+            for key, value in details.items():
+                full_description += f"- **{key}:** {value}\n"
+        
+        # Zeitstempel hinzufügen
+        full_description += f"\n\n_Erstellt: {datetime.now().strftime('%d.%m.%Y %H:%M')}_"
+        
+        try:
+            # Karte erstellen
+            card = self.client.create_card(
+                self.board_id,
+                stack_id,
+                title,
+                full_description
             )
-        
-        return board_id
+            self.logger.info(f"Auftragskarte erstellt: {card['id']} - {title}")
+            return True
+            
+        except DeckAPIException as e:
+            self.logger.error(f"Fehler beim Erstellen der Auftragskarte: {e}")
+            return False
     
-    def add_device_card(self, board_id: int, device_id: str, device_name: str, 
-                       status: str = "In Vorbereitung") -> int:
+    async def create_alarm_card(
+        self,
+        device_id: str,
+        alarm_type: str,
+        description: str,
+        timestamp: Optional[datetime] = None
+    ) -> bool:
         """
-        Füge eine Karte für ein Gerät zu einem Auftragsboard hinzu
+        Erstellt eine Alarmkarte.
         
         Args:
-            board_id: ID des Auftragsboards
-            device_id: ID des Geräts
-            device_name: Name des Geräts
-            status: Status des Geräts (bestimmt den Stack)
+            device_id: Geräte-ID
+            alarm_type: Typ des Alarms
+            description: Beschreibung des Alarms
+            timestamp: Zeitstempel des Alarms (optional)
             
         Returns:
-            Die ID der erstellten Karte
+            bool: True, wenn die Karte erstellt wurde, sonst False
         """
-        stack_id = self.get_stack_id_by_title(board_id, status)
+        stack_id = self.stacks.get("Alarme")
+        
         if not stack_id:
-            raise ValueError(f"Stack mit Titel '{status}' nicht gefunden im Board {board_id}")
-        
-        description = f"""
-# Gerät: {device_name}
-* Geräte-ID: {device_id}
-* Status: {status}
-* Hinzugefügt: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-
-## Letzte Messwerte:
-* Temperatur: -
-* Luftfeuchtigkeit: -
-* Betriebsstunden: -
-"""
-        
-        card = self.deck_client.create_card(
-            board_id, 
-            stack_id, 
-            title=f"Gerät: {device_name}", 
-            description=description
-        )
-        return card["id"]
-    
-    def update_device_status(self, board_id: int, card_id: int, source_stack_id: int, 
-                           target_status: str, measurement_data: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Aktualisiere den Status eines Geräts, indem die Karte in einen anderen Stack verschoben wird
-        
-        Args:
-            board_id: ID des Auftragsboards
-            card_id: ID der Gerätekarte
-            source_stack_id: Aktuelle Stack-ID der Karte
-            target_status: Zielstatus (Stack-Titel)
-            measurement_data: Optionale Messdaten zum Aktualisieren der Kartenbeschreibung
-        """
-        # Ziel-Stack finden
-        target_stack_id = self.get_stack_id_by_title(board_id, target_status)
-        if not target_stack_id:
-            raise ValueError(f"Ziel-Stack '{target_status}' nicht gefunden im Board {board_id}")
-        
-        # Aktuelle Karte abrufen
-        card = self.deck_client.get_card(board_id, source_stack_id, card_id)
-        
-        # Kartenbeschreibung aktualisieren, falls Messdaten vorhanden sind
-        description = card["description"]
-        if measurement_data:
-            # Einfache Ersetzung der Messwerte in der Beschreibung
-            # In einer realen Anwendung würde hier eine komplexere Textverarbeitung stattfinden
-            if "temperature" in measurement_data:
-                description = description.replace("* Temperatur: -", 
-                                               f"* Temperatur: {measurement_data['temperature']} °C")
-            if "humidity" in measurement_data:
-                description = description.replace("* Luftfeuchtigkeit: -", 
-                                                f"* Luftfeuchtigkeit: {measurement_data['humidity']} %")
-            if "runtime" in measurement_data:
-                description = description.replace("* Betriebsstunden: -", 
-                                               f"* Betriebsstunden: {measurement_data['runtime']} h")
+            self.logger.error("Keine Alarmliste gefunden")
+            return False
             
-            # Aktualisierungszeitstempel hinzufügen
-            description += f"\n\nAktualisiert: {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        # Titel generieren
+        title = f"Alarm: {alarm_type} ({device_id})"
         
-        # Karte in neuen Stack verschieben
-        # Dies erfordert das Löschen der Karte aus dem alten Stack und Neuerstellung im Ziel-Stack
-        self.deck_client.delete_card(board_id, source_stack_id, card_id)
-        self.deck_client.create_card(
-            board_id, 
-            target_stack_id, 
-            title=card["title"], 
-            description=description
+        # Zeitstempel formatieren
+        if not timestamp:
+            timestamp = datetime.now()
+        timestamp_str = timestamp.strftime("%d.%m.%Y %H:%M:%S")
+        
+        # Beschreibung erstellen
+        full_description = (
+            f"**Geräte-ID:** {device_id}\n\n"
+            f"**Alarmtyp:** {alarm_type}\n\n"
+            f"**Zeitpunkt:** {timestamp_str}\n\n"
+            f"**Beschreibung:**\n{description}\n\n"
         )
-    
-    def add_task_card(self, board_id: int, task_title: str, task_description: str, 
-                    assigned_to: Optional[str] = None, due_date: Optional[datetime] = None, 
-                    stack_name: str = "In Vorbereitung") -> int:
-        """
-        Füge eine Aufgabenkarte zu einem Auftragsboard hinzu
         
-        Args:
-            board_id: ID des Auftragsboards
-            task_title: Titel der Aufgabe
-            task_description: Beschreibung der Aufgabe
-            assigned_to: Name der zugewiesenen Person (optional)
-            due_date: Fälligkeitsdatum (optional)
-            stack_name: Name des Stacks (Status)
+        try:
+            # Karte erstellen
+            card = self.client.create_card(
+                self.board_id,
+                stack_id,
+                title,
+                full_description
+            )
+            self.logger.info(f"Alarmkarte erstellt: {card['id']} - {title}")
+            return True
             
-        Returns:
-            Die ID der erstellten Karte
-        """
-        stack_id = self.get_stack_id_by_title(board_id, stack_name)
-        if not stack_id:
-            raise ValueError(f"Stack mit Titel '{stack_name}' nicht gefunden im Board {board_id}")
-        
-        description = task_description + "\n\n"
-        
-        if assigned_to:
-            description += f"**Zugewiesen an:** {assigned_to}\n"
-        
-        description += f"**Erstellt:** {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        
-        # Fälligkeitsdatum formatieren, falls vorhanden
-        due_date_str = None
-        if due_date:
-            due_date_str = due_date.strftime("%Y-%m-%d %H:%M:%S")
-        
-        card = self.deck_client.create_card(
-            board_id, 
-            stack_id, 
-            title=task_title, 
-            description=description,
-            due_date=due_date_str
-        )
-        return card["id"]
-    
-    def complete_task(self, board_id: int, card_id: int, source_stack_id: int, 
-                    completion_note: Optional[str] = None) -> None:
-        """
-        Markiere eine Aufgabe als abgeschlossen, indem die Karte in den "Abgeschlossen"-Stack verschoben wird
-        
-        Args:
-            board_id: ID des Auftragsboards
-            card_id: ID der Aufgabenkarte
-            source_stack_id: Aktuelle Stack-ID der Karte
-            completion_note: Optionale Notiz zur Fertigstellung
-        """
-        target_stack_id = self.get_stack_id_by_title(board_id, "Abgeschlossen")
-        if not target_stack_id:
-            raise ValueError(f"Stack 'Abgeschlossen' nicht gefunden im Board {board_id}")
-        
-        # Aktuelle Karte abrufen
-        card = self.deck_client.get_card(board_id, source_stack_id, card_id)
-        
-        # Beschreibung aktualisieren
-        description = card["description"]
-        description += f"\n\n**Abgeschlossen:** {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        
-        if completion_note:
-            description += f"\n\n**Anmerkung:** {completion_note}"
-        
-        # Karte in "Abgeschlossen"-Stack verschieben
-        self.deck_client.delete_card(board_id, source_stack_id, card_id)
-        self.deck_client.create_card(
-            board_id, 
-            target_stack_id, 
-            title=card["title"], 
-            description=description
-        )
-
-
-# Beispielverwendung
-if __name__ == "__main__":
-    # Nur zur Demonstration, in der realen Anwendung sollten die Zugangsdaten 
-    # aus einer Konfigurationsdatei oder Umgebungsvariablen geladen werden
-    NEXTCLOUD_URL = os.environ.get("NEXTCLOUD_URL", "https://cloud.example.com")
-    NEXTCLOUD_USER = os.environ.get("NEXTCLOUD_USER", "admin")
-    NEXTCLOUD_PASSWORD = os.environ.get("NEXTCLOUD_PASSWORD", "password")
-    
-    try:
-        integration = SwissAirDryDeckIntegration(NEXTCLOUD_URL, NEXTCLOUD_USER, NEXTCLOUD_PASSWORD)
-        
-        # Beispiel: Neuen Auftrag erstellen
-        job_board_id = integration.create_job_board("AUF-2023-042", "Keller Muster AG", "Muster AG")
-        print(f"Neues Auftragsboard erstellt mit ID: {job_board_id}")
-        
-        # Beispiel: Gerät zum Auftrag hinzufügen
-        device_card_id = integration.add_device_card(job_board_id, "DEV-123", "Entfeuchter 5000")
-        print(f"Neue Gerätekarte erstellt mit ID: {device_card_id}")
-        
-    except Exception as e:
-        print(f"Fehler: {e}")
+        except DeckAPIException as e:
+            self.logger.error(f"Fehler beim Erstellen der Alarmkarte: {e}")
+            return False

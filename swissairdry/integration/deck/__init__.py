@@ -1,15 +1,11 @@
 """
-SwissAirDry Nextcloud Deck Integration
---------------------------------------
+SwissAirDry Integration - Nextcloud Deck
+----------------------------------------
 
-Dieses Paket enthält die Integration zwischen SwissAirDry und der Nextcloud Deck App.
-
-Die Hauptklassen sind:
-- DeckAPIClient: Client für die Nextcloud Deck API
-- SwissAirDryDeckIntegration: Integrationslogik zwischen SwissAirDry und Deck
+Dieses Modul enthält die Integration mit der Nextcloud Deck App.
 """
 
 from .client import DeckAPIClient, DeckAPIException
 from .integration import SwissAirDryDeckIntegration
 
-__all__ = ["DeckAPIClient", "DeckAPIException", "SwissAirDryDeckIntegration"]
+__all__ = ['DeckAPIClient', 'DeckAPIException', 'SwissAirDryDeckIntegration']

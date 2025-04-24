@@ -42,30 +42,51 @@ class MQTTClient:
         self.username = username
         self.password = password
         
-        # Zufälligen Client-ID erstellen, um doppelte Verbindungen zu vermeiden
+        # Noch eindeutigere Client-ID für verbesserte Stabilität
         import uuid
         import random
         import socket
+        import os
         
-        # Noch eindeutigere Client-ID durch Kombination mehrerer Faktoren:
-        # - UUID (vollständig, nicht nur 8 Zeichen)
-        # - Aktueller Zeitstempel mit Mikrosekunden-Genauigkeit
-        # - Zufällige Zahl
-        # - Hostname (falls verfügbar)
+        # Garantiert eindeutige Identifier mit mehreren Faktoren:
+        # - Kompakte UUID (ohne Bindestriche)
+        # - Präziser Timestamp (Millisekunden)
+        # - Process-ID (PID) für Multi-Prozess-Umgebungen
+        # - Zufällige Komponente größerer Bereich
+        uid = str(uuid.uuid4()).replace('-', '')[:16]  # Kompakt aber eindeutig
+        timestamp = int(time.time() * 10000)  # 10000tel Sekunden
+        pid = os.getpid()
+        random_suffix = random.randint(10000, 99999)
+        
+        # In Docker/Container-Umgebungen hat jeder Container eine eigene ID
         try:
-            hostname = socket.gethostname()[:8]
+            # Verwende Docker Container ID falls verfügbar (nur ersten 8 Zeichen)
+            with open('/proc/self/cgroup', 'r') as f:
+                for line in f:
+                    if '/docker/' in line:
+                        docker_id = line.split('/docker/')[1].strip()[:8]
+                        break
+                else:
+                    docker_id = None
+        except:
+            docker_id = None
+            
+        # Hostname für weitere Eindeutigkeit
+        try:
+            hostname = socket.gethostname()[:6]
         except:
             hostname = "nohost"
-            
-        timestamp = int(time.time() * 1000)  # Millisekunden
-        random_suffix = random.randint(1000, 9999)
-        client_id = f"swissairdry-api-{uuid.uuid4()}-{timestamp}-{random_suffix}-{hostname}"
         
-        # Wenn die ID zu lang ist (Broker-Limits), kürzen
-        if len(client_id) > 128:
-            client_id = client_id[:128]
-            
-        logger.info(f"Generierte MQTT-Client-ID: {client_id}")
+        # Sicheren Client Identifier bauen
+        context = docker_id[:6] if docker_id else "std"
+        client_id = f"sard-{uid}-{timestamp}-{pid}-{random_suffix}-{hostname}-{context}"
+        
+        # MQTT-Standard: Maximal 23 Bytes
+        if len(client_id) > 23:
+            # Begrenzen aber Eindeutigkeit bewahren (UUID + Timestamp bleiben)
+            client_id = f"sard-{uid[:8]}-{timestamp}-{random_suffix}"
+                    
+        logger.info(f"Sichere MQTT-Client-ID generiert: {client_id}")
         
         # clean_session auf True setzen, um alte Sessions zu vermeiden
         # Dies ist wichtig, um Probleme bei der Wiederverbindung zu vermeiden
@@ -337,19 +358,17 @@ class MQTTClient:
                 import uuid
                 import random
                 import socket
+                import os
                 
-                try:
-                    hostname = socket.gethostname()[:8]
-                except:
-                    hostname = "nohost"
-                    
-                timestamp = int(time.time() * 1000)  # Millisekunden
-                random_suffix = random.randint(10000, 99999)  # Größerer Bereich
-                new_client_id = f"swissairdry-api-{uuid.uuid4()}-{timestamp}-{random_suffix}-{hostname}-reconnect"
+                # Komplett neue Client ID generieren (sehr kurz für MQTT-Standard)
+                uid = str(uuid.uuid4()).replace('-', '')[:8]
+                timestamp = int(time.time() * 1000) % 10000000  # Gekürzt: letzte 7 Ziffern
+                random_suffix = random.randint(1000, 9999)
+                new_client_id = f"sard-{uid}-{timestamp}-{random_suffix}"
                 
-                # Wenn die ID zu lang ist (Broker-Limits), kürzen
-                if len(new_client_id) > 128:
-                    new_client_id = new_client_id[:128]
+                # MQTT-Standard: Maximal 23 Bytes/Zeichen für Client-ID
+                if len(new_client_id) > 23:
+                    new_client_id = f"sard-{uid[:6]}-{timestamp}"
                     
                 logger.info(f"Erstelle neuen MQTT-Client mit ID: {new_client_id}")
                 

@@ -75,10 +75,18 @@ class MQTTClient:
             self.logger.info(f"Verwende MQTT-Client-ID: {self.client_id}")
             
             # Client initialisieren - API-Version ist seit 2.0.0 verfügbar, prüfen wir darauf
-            if hasattr(mqtt, 'CallbackAPIVersion'):
-                self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=self.client_id)
-            else:
-                self.client = mqtt.Client(client_id=self.client_id)
+            # Vereinfachte Version des Client-Constructors, die mit allen paho-mqtt-Versionen kompatibel ist
+            try:
+                # Neuer Stil mit API-Version (paho-mqtt >= 2.0.0)
+                if hasattr(mqtt, 'CallbackAPIVersion'):
+                    self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=self.client_id)
+                # Alter Stil ohne API-Version (paho-mqtt < 2.0.0)
+                else:
+                    self.client = mqtt.Client(client_id=self.client_id)
+            except TypeError as e:
+                self.logger.warning(f"Fehler beim Erstellen des MQTT-Clients: {e}")
+                # Absoluter Fallback ohne Parameter, falls alles andere fehlschlägt
+                self.client = mqtt.Client()
             
             # Callbacks setzen
             self.client.on_connect = self._on_connect

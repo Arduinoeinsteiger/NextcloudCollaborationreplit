@@ -288,7 +288,14 @@ async def startup_event():
             mqtt_password = os.getenv("MQTT_PASSWORD", "")
             
             print(f"Verbinde mit MQTT-Broker {mqtt_host}:{mqtt_port}...")
-            mqtt_client = MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password)
+            
+            # Eindeutige Client-ID für diesen Client generieren
+            import uuid
+            import time
+            client_id = f"sard-simple-{str(uuid.uuid4())[0:6]}-{int(time.time() * 1000)}"
+            print(f"MQTT-Client-ID: {client_id}")
+            
+            mqtt_client = MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password, client_id=client_id)
             
             # Callback für SwissAirDry-Nachrichten
             mqtt_client.add_message_callback("swissairdry/#", mqtt_message_handler)

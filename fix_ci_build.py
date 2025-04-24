@@ -101,7 +101,23 @@ def fix_setup_py():
     
     if not os.path.exists(setup_py_path):
         print(f"setup.py nicht gefunden: {setup_py_path}")
-        return False
+        # Create minimal setup.py if missing
+        with open(setup_py_path, 'w') as f:
+            f.write('''from setuptools import setup, find_packages
+
+setup(
+    name="swissairdry",
+    version="0.1.0",
+    packages=find_packages(include=['swissairdry', 'swissairdry.*']),
+    install_requires=[
+        'fastapi>=0.68.0',
+        'uvicorn>=0.15.0',
+        'pydantic>=1.8.0',
+        'paho-mqtt>=1.6.1',
+    ],
+    python_requires='>=3.9',
+)''')
+        return True
     
     with open(setup_py_path, 'r') as f:
         content = f.read()

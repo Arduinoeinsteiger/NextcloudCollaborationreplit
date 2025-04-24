@@ -25,7 +25,7 @@ setup(
     description="SwissAirDry - Eine Anwendung für die Verwaltung von Trocknungsgeräten und Felddienstoperationen",
     author="Swiss Air Dry Team",
     author_email="info@swissairdry.com",
-    packages=packages,  # Verwende die explizit definierte Package-Liste
+    packages=find_packages(include=['swissairdry', 'swissairdry.*']),  # Verwende die explizit definierte Package-Liste
     package_dir={"": "."},  # Root-Verzeichnis explizit angeben
     python_requires=">=3.9",
     include_package_data=True,  # Auch Nicht-Python-Dateien einbeziehen

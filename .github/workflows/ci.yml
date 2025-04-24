@@ -1,0 +1,38 @@
+name: SwissAirDry CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov pytest-mock pytest-asyncio flake8 black bandit
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Lint with flake8
+        run: |
+          # Stoppt den Build bei kritischen Fehlern
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero behandelt alle Fehler als Warnungen
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Check formatting with black
+        run: |
+          black --check .
+      - name: Security check with bandit
+        run: |
+          bandit -r swissairdry -x tests
+      - name: Test with pytest
+        run: |
+          pytest --cov=swissairdry

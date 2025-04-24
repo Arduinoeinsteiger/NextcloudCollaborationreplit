@@ -53,6 +53,7 @@ class MQTTClient:
         self.connected = False
         self.message_callbacks: Dict[str, List[Callable]] = {}
         self.logger = logging.getLogger("mqtt_client")
+        self.user_client_id = client_id  # Speichere die übergebene Client-ID
     
     async def connect(self) -> bool:
         """
@@ -69,8 +70,8 @@ class MQTTClient:
             # Client erstellen mit Client-ID wenn angegeben
             import uuid
             import time
-            # Speichere die erhaltene Client-ID
-            self.client_id = client_id if client_id else f"sard-{str(uuid.uuid4())[0:8]}-{int(time.time())}"
+            # Verwende die im Konstruktor übergebene oder generiere eine neue Client-ID
+            self.client_id = self.user_client_id if self.user_client_id else f"sard-{str(uuid.uuid4())[0:8]}-{int(time.time())}"
             self.logger.info(f"Verwende MQTT-Client-ID: {self.client_id}")
             
             # Client initialisieren - API-Version ist seit 2.0.0 verfügbar, prüfen wir darauf

@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>swissairdry</id>
+    <name>Swiss Air Dry</name>
+    <summary>IoT-Geräteverwaltung für Trocknungsgeräte</summary>
+    <description><![CDATA[
+# Swiss Air Dry
+
+Diese App bietet eine umfassende Lösung zur Überwachung und Verwaltung von Trocknungsgeräten für die Baubranche.
+
+## Funktionen
+- Echtzeit-Überwachung von Trocknungsgeräten über IoT-Sensoren
+- Dashboard mit Gerätestatistiken und Alarmen
+- Integration mit dem Deck-Board für Aufgabenverwaltung
+- Automatische Benachrichtigungen bei Geräteproblemen
+- Energieverbrauchsüberwachung und -optimierung
+
+## Vorteile
+- Reduzierte Ausfallzeiten durch proaktive Überwachung
+- Optimierte Ressourcennutzung
+- Einfache Integration in bestehende Nextcloud-Umgebungen
+- API für die Verbindung mit externen Systemen
+    ]]></description>
+    <version>1.0.0</version>
+    <licence>agpl</licence>
+    <author>SwissAirDry Team</author>
+    <namespace>SwissAirDry</namespace>
+    <category>monitoring</category>
+    <category>tools</category>
+    <website>https://swissairdry.com</website>
+    <bugs>https://github.com/swissairdry/swissairdry/issues</bugs>
+    <repository type="git">https://github.com/swissairdry/swissairdry.git</repository>
+    <screenshot>https://raw.githubusercontent.com/swissairdry/swissairdry/main/screenshots/dashboard.png</screenshot>
+    <dependencies>
+        <nextcloud min-version="26" max-version="27"/>
+        <python min-version="3.9" max-version="3.11"/>
+    </dependencies>
+    <background-jobs>
+        <job>OCA\SwissAirDry\BackgroundJob\DeviceStatusJob</job>
+        <job>OCA\SwissAirDry\BackgroundJob\NotificationJob</job>
+    </background-jobs>
+    <commands>
+        <command>OCA\SwissAirDry\Command\ScanDevices</command>
+        <command>OCA\SwissAirDry\Command\CheckStatus</command>
+    </commands>
+    <navigations>
+        <navigation>
+            <name>Swiss Air Dry</name>
+            <route>swissairdry.page.index</route>
+            <icon>app-dark.svg</icon>
+            <order>10</order>
+        </navigation>
+    </navigations>
+    <settings>
+        <admin>OCA\SwissAirDry\Settings\Admin</admin>
+        <admin-section>OCA\SwissAirDry\Settings\AdminSection</admin-section>
+    </settings>
+    <activity>
+        <settings>
+            <setting>OCA\SwissAirDry\Activity\Setting</setting>
+        </settings>
+        <providers>
+            <provider>OCA\SwissAirDry\Activity\Provider</provider>
+        </providers>
+    </activity>
+</info>

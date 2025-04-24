@@ -1,0 +1,78 @@
+{
+    "id": "swissairdry",
+    "name": "Swiss Air Dry",
+    "summary": "IoT-Geräteverwaltung für Trocknungsgeräte",
+    "description": "Umfassende Lösung zur Überwachung und Verwaltung von Trocknungsgeräten für die Baubranche. Mit Echtzeitüberwachung, Alarmen und Dashboard.",
+    "version": "1.0.0",
+    "licence": "AGPL-3.0-or-later",
+    "author": "SwissAirDry Team",
+    "namespace": "SwissAirDry",
+    "category": "monitoring",
+    "website": "https://swissairdry.com",
+    "bugs": "https://github.com/swissairdry/swissairdry/issues",
+    "repository": "https://github.com/swissairdry/swissairdry.git",
+    "dependencies": {
+        "nextcloud": {
+            "min-version": "26",
+            "max-version": "27"
+        }
+    },
+    "externals": {
+        "npm-dependencies": {
+            "vue": "^3.2.0",
+            "vue-router": "^4.1.6",
+            "pinia": "^2.0.33",
+            "axios": "^1.3.4",
+            "chart.js": "^4.2.1",
+            "mqtt": "^4.3.7",
+            "@nextcloud/vue": "^7.12.0",
+            "@nextcloud/axios": "^2.3.0",
+            "@nextcloud/router": "^2.1.2",
+            "@nextcloud/dialogs": "^4.2.0",
+            "@nextcloud/auth": "^2.0.0"
+        }
+    },
+    "dashboard": {
+        "widget": {
+            "name": "Swiss Air Dry Status",
+            "url": "widget/status",
+            "descriptive-name": "Statusübersicht der Trocknungsgeräte"
+        }
+    },
+    "navigations": [
+        {
+            "name": "Swiss Air Dry",
+            "route": "/",
+            "icon": "app.svg",
+            "order": 80
+        }
+    ],
+    "app_types": [
+        "web"
+    ],
+    "web_types": [
+        "csp-aware",
+        "dynamic-mount"
+    ],
+    "extapp_points": {
+        "top_menu": {
+            "url": "app/menu",
+            "name": "Swiss Air Dry"
+        }
+    },
+    "external-apps": [
+        {
+            "name": "swissairdry-daemon",
+            "type": "daemon",
+            "exec": "daemon/daemon.py",
+            "protocols": ["http"],
+            "ports": [8701]
+        }
+    ],
+    "container": {
+        "entrypoint": "python3",
+        "cmd": [
+            "daemon/daemon.py"
+        ]
+    }
+}

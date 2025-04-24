@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # API-Server (FastAPI)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/swissairdry
+      - MQTT_BROKER=mqtt
+      - MQTT_PORT=1883
+      - PRIMARY_API_HOST=api.vgnc.org
+      - PRIMARY_API_PORT=443
+      - PRIMARY_API_SCHEME=https
+      - BACKUP_API_HOST=swissairdry.replit.app
+      - BACKUP_API_PORT=443
+      - BACKUP_API_SCHEME=https
+      - API_PREFIX=/api/v1
+      - NEXTCLOUD_URL=https://cloud.vgnc.org
+      - JWT_SECRET=supersecretkey
+      - JWT_ALGORITHM=HS256
+      - CORS_ORIGINS=["*"]
+    volumes:
+      - ./api/app:/app
+    depends_on:
+      - db
+      - mqtt
+
+  # PostgreSQL-Datenbank
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=swissairdry
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # MQTT-Broker (Eclipse Mosquitto)
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./api/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  # Nextcloud AppAPI Container (optional)
+  nextcloud:
+    build:
+      context: ./nextcloud
+      dockerfile: Dockerfile.appapi
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      - MQTT_BROKER=mqtt
+      - MQTT_PORT=1883
+      - API_URL=http://api:5000
+    depends_on:
+      - api
+      - mqtt
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwissAirDry Gerätestandort</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Open Sans', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: #0082c9;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 500px;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .device-info {
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .device-info h2 {
+            margin-top: 0;
+            color: #0082c9;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            color: #333;
+        }
+        
+        .return-link {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .return-link a {
+            display: inline-block;
+            background-color: #0082c9;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .return-link a:hover {
+            background-color: #006cb3;
+        }
+        
+        .device-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-online {
+            background-color: #4caf50;
+        }
+        
+        .status-warning {
+            background-color: #ff9800;
+        }
+        
+        .status-offline {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SwissAirDry Gerätestandort</h1>
+            <p>Echtzeit-Standortverfolgung und Statusinformationen</p>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <div class="device-info">
+            <h2>Geräteinformationen</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Geräte-ID</div>
+                    <div class="info-value" id="device-id">Wird geladen...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Name</div>
+                    <div class="info-value" id="device-name">Wird geladen...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Standort</div>
+                    <div class="info-value" id="device-location">Wird geladen...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">
+                        <span class="device-status status-online" id="status-indicator"></span>
+                        <span id="device-status">Wird geladen...</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Koordinaten</div>
+                    <div class="info-value" id="device-coordinates">Wird geladen...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Zuletzt aktualisiert</div>
+                    <div class="info-value" id="last-updated">Wird geladen...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="return-link">
+            <a href="javascript:history.back()">Zurück zur Übersicht</a>
+        </div>
+    </div>
+    
+    <script>
+        // URL-Parameter auslesen
+        const urlParams = new URLSearchParams(window.location.search);
+        const lat = parseFloat(urlParams.get('lat'));
+        const lon = parseFloat(urlParams.get('lon'));
+        const deviceId = urlParams.get('device');
+        
+        // Gerätestatus simulieren (in der realen Anwendung würde dies aus der Datenbank kommen)
+        const deviceStatus = "Online";
+        const deviceName = deviceId ? `SwissAirDry Pro #${deviceId.split('_')[1]}` : "Unbekannt";
+        const deviceLocation = "Kundenstandort";
+        const lastUpdated = new Date().toLocaleString();
+        
+        // DOM-Elemente aktualisieren
+        document.getElementById('device-id').textContent = deviceId || "Unbekannt";
+        document.getElementById('device-name').textContent = deviceName;
+        document.getElementById('device-location').textContent = deviceLocation;
+        document.getElementById('device-status').textContent = deviceStatus;
+        document.getElementById('device-coordinates').textContent = lat && lon ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : "Unbekannt";
+        document.getElementById('last-updated').textContent = lastUpdated;
+        
+        // Status-Indikator aktualisieren
+        const statusIndicator = document.getElementById('status-indicator');
+        statusIndicator.className = 'device-status status-online'; // Oder status-warning, status-offline
+        
+        // Diese Funktion wird nicht mehr verwendet, da wir jetzt Leaflet verwenden
+    </script>
+    
+    <!-- OpenStreetMap mit Leaflet laden -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+        crossorigin=""></script>
+    
+    <script>
+        // Leaflet Karte initialisieren
+        function initMap() {
+            if (!lat || !lon) {
+                document.getElementById('map').innerHTML = '<div style="padding: 20px; text-align: center;">Keine Koordinaten verfügbar</div>';
+                return;
+            }
+            
+            // Leaflet-Karte initialisieren
+            const map = L.map('map').setView([lat, lon], 15);
+            
+            // OpenStreetMap-Layer hinzufügen
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Marker für den Gerätestandort hinzufügen
+            const marker = L.marker([lat, lon]).addTo(map);
+            
+            // Popup mit Infos hinzufügen
+            marker.bindPopup(`
+                <div style="padding: 5px;">
+                    <h3 style="margin-top: 0;">${deviceName}</h3>
+                    <p><strong>ID:</strong> ${deviceId}</p>
+                    <p><strong>Status:</strong> ${deviceStatus}</p>
+                </div>
+            `).openPopup();
+        }
+        
+        // Karte initialisieren wenn DOM geladen ist
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwissAirDry API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f7f7f7;
+        }
+        header {
+            background-color: #0066cc;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            padding: 1.5rem;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .feature {
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #f9f9f9;
+        }
+        h1, h2, h3 {
+            color: #0066cc;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            border-top: 1px solid #e1e1e1;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0066cc;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-right: 0.5rem;
+        }
+        .button:hover {
+            background-color: #0055aa;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SwissAirDry API</h1>
+        <p>Die Zentrale Schnittstelle für SwissAirDry Geräte und Daten</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>Willkommen zur SwissAirDry API</h2>
+            <p>
+                Die SwissAirDry API ermöglicht die Steuerung und Überwachung von Trocknungsgeräten sowie 
+                die Verwaltung von Aufträgen und Gerätedaten. Diese API bildet das Herzstück des
+                SwissAirDry-Ökosystems.
+            </p>
+            <div>
+                <a href="/docs" class="button">API-Dokumentation</a>
+                <a href="/api/devices" class="button">Gerätedaten</a>
+                <a href="/health" class="button">System-Status</a>
+                <a href="/api/deck/status" class="button">Deck Integration</a>
+            </div>
+        </div>
+
+        <h2>Features</h2>
+        <div class="feature-grid">
+            <div class="feature">
+                <h3>Gerätesteuerung</h3>
+                <p>Fernsteuerung und Überwachung von SwissAirDry Trocknungsgeräten in Echtzeit.</p>
+            </div>
+            <div class="feature">
+                <h3>Nextcloud Deck Integration</h3>
+                <p>Nahtlose Integration mit der Nextcloud Deck App für Projektmanagement und Auftragsabwicklung.</p>
+            </div>
+            <div class="feature">
+                <h3>Sensordaten</h3>
+                <p>Erfassung und Analyse von Umgebungsdaten wie Temperatur, Luftfeuchtigkeit und Energieverbrauch.</p>
+            </div>
+            <div class="feature">
+                <h3>MQTT Unterstützung</h3>
+                <p>Kommunikation mit Geräten über das MQTT-Protokoll für zuverlässige Datenübertragung.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>API Bereiche</h2>
+            <ul>
+                <li><strong>/api/devices</strong> - Verwaltung von Geräten</li>
+                <li><strong>/api/device/{id}/data</strong> - Sensordaten abrufen und speichern</li>
+                <li><strong>/api/device/{id}/command</strong> - Befehle an Geräte senden</li>
+                <li><strong>/api/deck</strong> - Nextcloud Deck App Integration</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>SwissAirDry API System &copy; 2023-2025</p>
+    </footer>
+</body>
+</html>

@@ -1,6 +1,7 @@
 """
-SwissAirDry API Routen
----------------------
+SwissAirDry API Routes
 
-Dieses Paket enthält die API-Routen für die SwissAirDry-Anwendung.
+Dieses Modul enthält die Routing-Definitionen für die SwissAirDry API.
 """
+
+__all__ = []

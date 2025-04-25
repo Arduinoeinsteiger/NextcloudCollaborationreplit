@@ -19,3 +19,7 @@ prune *.egg-info
 prune */__pycache__
 prune */*/__pycache__
 prune */*/*/__pycache__
+recursive-include swissairdry/api/templates *
+recursive-include swissairdry/api/static *
+recursive-include swissairdry *.py
+recursive-include tests *.py

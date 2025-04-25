@@ -36,7 +36,8 @@ import mqtt
 import utils
 
 # API-Routen importieren
-from routes import deck, location
+from routes import location
+from routes import deck  # Umbenannt zu Jobs Management
 
 # Logging einrichten
 logging.basicConfig(
@@ -248,10 +249,10 @@ async def root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.get("/deck-preview", response_class=HTMLResponse)
-async def deck_preview(request: Request):
-    """Zeigt eine Vorschau der Deck-API-Integration."""
-    return templates.TemplateResponse("deck_preview.html", {"request": request})
+@app.get("/jobs-preview", response_class=HTMLResponse)
+async def jobs_preview(request: Request):
+    """Zeigt eine Vorschau der Job-Management-API."""
+    return templates.TemplateResponse("jobs_preview.html", {"request": request})
 
 
 @app.get("/integration-options", response_class=HTMLResponse)

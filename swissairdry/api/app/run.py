@@ -22,9 +22,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .database import engine, get_db, Base
-from . import schemas, crud
-from .mqtt import MQTTClient
+from swissairdry.database import engine, get_db, Base
+from swissairdry import schemas, crud
+from swissairdry.mqtt import MQTTClient
 
 # Logging einrichten
 logging.basicConfig(

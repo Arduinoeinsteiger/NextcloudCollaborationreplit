@@ -9,6 +9,10 @@ Dieses Skript behebt alle bekannten Probleme mit den CI-Builds für SwissAirDry:
 - Test-Umgebungsprobleme
 """
 
+try:
+    import fastapi
+except ImportError:
+    print("fastapi could not be imported, install with: pip install fastapi")
 import os
 import sys
 import glob
@@ -409,7 +413,7 @@ def fix_pydantic_configs():
         
         # orm_mode durch from_attributes ersetzen
         if "orm_mode" in content:
-            content = content.replace("orm_mode = True", "from_attributes = True")
+            content = content.replace("from_attributes = True", "from_attributes = True")
             modified = True
         
         # Schema_Extra durch model_config aktualisieren

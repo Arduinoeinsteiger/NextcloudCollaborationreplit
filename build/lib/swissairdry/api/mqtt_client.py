@@ -130,7 +130,7 @@ class MQTTClient:
             return False
         
         try:
-            result, _ = self.client.subscribe(topic)
+            result, _ = self.client and self.client.subscribe(topic)
             success = result == mqtt.MQTT_ERR_SUCCESS
             if success:
                 self.logger.info(f"Abonniert: {topic}")
@@ -155,7 +155,7 @@ class MQTTClient:
             return False
         
         try:
-            result, _ = self.client.unsubscribe(topic)
+            result, _ = self.client and self.client.unsubscribe(topic)
             success = result == mqtt.MQTT_ERR_SUCCESS
             if success:
                 self.logger.info(f"Abonnement gekündigt: {topic}")
@@ -186,7 +186,7 @@ class MQTTClient:
             if not isinstance(payload, (str, bytes)):
                 payload = json.dumps(payload)
             
-            result = self.client.publish(topic, payload, qos, retain)
+            result = self.client and self.client.publish(topic, payload, qos, retain)
             success = result.rc == mqtt.MQTT_ERR_SUCCESS
             if success:
                 self.logger.debug(f"Veröffentlicht: {topic}")
@@ -234,7 +234,7 @@ class MQTTClient:
             self.logger.info("Verbunden mit MQTT-Broker")
             
             # Standard-Themen abonnieren
-            self.client.subscribe("swissairdry/#")
+            self.client and self.client.subscribe("swissairdry/#")
         else:
             self.logger.error(f"Verbindung zum MQTT-Broker fehlgeschlagen mit Code {rc}")
     

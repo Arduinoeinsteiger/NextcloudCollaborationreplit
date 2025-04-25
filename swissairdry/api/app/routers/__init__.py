@@ -8,7 +8,7 @@ Dieses Modul initialisiert alle Router für die SwissAirDry-API.
 """
 
 # Importiere alle Router, die in der API verwendet werden
-from .api_status import router as api_status_router
+from swissairdry.api_status import router as api_status_router
 
 # Liste aller Router, die in der Hauptanwendung registriert werden sollen
 routers = [

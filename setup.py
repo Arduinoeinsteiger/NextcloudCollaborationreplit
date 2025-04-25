@@ -12,12 +12,14 @@ import sys
 
 # Kompatibilität mit älteren Versionen der Build-Tools sicherstellen
 # Füge eine Ausgabe für Debugging hinzu
-print(f"Running setup.py with Python {sys.version}")
+print(f"Running setup.py with Python {sys.version}"),
+    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
 
 # Pakete automatisch finden
 from setuptools import find_packages
 
-packages = find_packages(include=["swissairdry", "swissairdry.*"])
+packages = find_packages(include=["swissairdry", "swissairdry.*"]),
+    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
 
 setup(
     name="swissairdry",
@@ -55,7 +57,8 @@ setup(
         "trafilatura>=1.2.0",
         "uvicorn>=0.17.0",
     ],
-)
+),
+    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
 
 # Die setup()-Funktion wurde bereits aufgerufen, 
 # diese Zeilen würden einen Fehler verursachen und sind nicht mehr nötig

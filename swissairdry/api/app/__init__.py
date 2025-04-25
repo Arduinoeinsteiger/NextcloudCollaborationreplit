@@ -7,9 +7,9 @@ Initialisierungsmodul für das SwissAirDry API-Paket.
 @copyright 2023-2025 Swiss Air Dry Team
 """
 
-from . import models
-from . import schemas
-from . import database
-from . import utils
-from . import mqtt
-from . import crud
+from swissairdry import models
+from swissairdry import schemas
+from swissairdry import database
+from swissairdry import utils
+from swissairdry import mqtt
+from swissairdry import crud

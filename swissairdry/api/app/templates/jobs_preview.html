@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwissAirDry - Job Management Vorschau</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #0066cc;
+            color: white;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+        }
+        h1, h2, h3 {
+            color: #0066cc;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .job-card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex: 1 1 calc(33% - 20px);
+            min-width: 300px;
+        }
+        .job-card h3 {
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .job-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .status-active {
+            background-color: #28a745;
+        }
+        .status-completed {
+            background-color: #6c757d;
+        }
+        .status-urgent {
+            background-color: #dc3545;
+        }
+        .device-list {
+            margin-top: 15px;
+        }
+        .device-item {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .task-list {
+            margin-top: 15px;
+        }
+        .task-item {
+            background: white;
+            border-left: 3px solid #0066cc;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .btn {
+            display: inline-block;
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        @media (max-width: 768px) {
+            .job-card {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SwissAirDry Job Management</h1>
+        <p>Übersicht und Verwaltung aller laufenden Aufträge</p>
+    </header>
+
+    <main>
+        <h2>Aktuelle Aufträge</h2>
+        <p>Hier sehen Sie eine Übersicht aller aktuellen Aufträge und deren Status:</p>
+
+        <div class="container">
+            <!-- Job Card 1 -->
+            <div class="job-card">
+                <h3>Keller Trocknung <span class="job-status status-active">Aktiv</span></h3>
+                <p><strong>Kunde:</strong> Müller GmbH</p>
+                <p><strong>Standort:</strong> Zürich, Bahnhofstrasse 10</p>
+                <p><strong>Start:</strong> 21.04.2025</p>
+                
+                <div class="device-list">
+                    <h4>Geräte</h4>
+                    <div class="device-item">
+                        <p><strong>DEH-2000</strong> - Im Betrieb</p>
+                        <p>Luftfeuchte: 45% | Temperatur: 22°C</p>
+                    </div>
+                    <div class="device-item">
+                        <p><strong>DEH-3000</strong> - Im Betrieb</p>
+                        <p>Luftfeuchte: 42% | Temperatur: 21°C</p>
+                    </div>
+                </div>
+                
+                <div class="task-list">
+                    <h4>Aufgaben</h4>
+                    <div class="task-item">
+                        <p><strong>Tägliche Überprüfung</strong></p>
+                        <p>Zugewiesen an: Max Mustermann</p>
+                    </div>
+                </div>
+                
+                <p style="margin-top: 20px;">
+                    <a href="#" class="btn">Details anzeigen</a>
+                </p>
+            </div>
+            
+            <!-- Job Card 2 -->
+            <div class="job-card">
+                <h3>Wasserschaden Sanierung <span class="job-status status-urgent">Dringend</span></h3>
+                <p><strong>Kunde:</strong> Hotel Seeblick</p>
+                <p><strong>Standort:</strong> Luzern, Seestrasse 45</p>
+                <p><strong>Start:</strong> 24.04.2025</p>
+                
+                <div class="device-list">
+                    <h4>Geräte</h4>
+                    <div class="device-item">
+                        <p><strong>DEH-5000</strong> - Im Betrieb</p>
+                        <p>Luftfeuchte: 65% | Temperatur: 18°C</p>
+                    </div>
+                    <div class="device-item">
+                        <p><strong>FAN-1000</strong> - Im Betrieb</p>
+                        <p>Luftzirkulation: 100%</p>
+                    </div>
+                </div>
+                
+                <div class="task-list">
+                    <h4>Aufgaben</h4>
+                    <div class="task-item">
+                        <p><strong>Schimmelkontrolle</strong></p>
+                        <p>Zugewiesen an: Anna Schmidt</p>
+                    </div>
+                    <div class="task-item">
+                        <p><strong>Bautrockner installieren</strong></p>
+                        <p>Zugewiesen an: Thomas Weber</p>
+                    </div>
+                </div>
+                
+                <p style="margin-top: 20px;">
+                    <a href="#" class="btn">Details anzeigen</a>
+                </p>
+            </div>
+            
+            <!-- Job Card 3 -->
+            <div class="job-card">
+                <h3>Bautrocknung Neubau <span class="job-status status-completed">Abgeschlossen</span></h3>
+                <p><strong>Kunde:</strong> Bauconsult AG</p>
+                <p><strong>Standort:</strong> Bern, Neubauprojekt Ost</p>
+                <p><strong>Start:</strong> 10.04.2025</p>
+                <p><strong>Ende:</strong> 20.04.2025</p>
+                
+                <div class="device-list">
+                    <h4>Geräte</h4>
+                    <div class="device-item">
+                        <p><strong>DEH-4000</strong> - Außer Betrieb</p>
+                        <p>Luftfeuchte: 30% | Temperatur: 22°C</p>
+                    </div>
+                </div>
+                
+                <div class="task-list">
+                    <h4>Aufgaben</h4>
+                    <div class="task-item">
+                        <p><strong>Abschlussbericht erstellen</strong></p>
+                        <p>Status: Erledigt</p>
+                    </div>
+                </div>
+                
+                <p style="margin-top: 20px;">
+                    <a href="#" class="btn">Bericht anzeigen</a>
+                </p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h2>API-Integration</h2>
+            <p>Alle Daten sind über unsere APIs verfügbar. Diese Jobs-API ersetzt die vorherige Nextcloud Deck-Integration.</p>
+            <p>Beispiel-Endpunkte:</p>
+            <ul>
+                <li><code>/api/jobs</code> - Liste aller Jobs</li>
+                <li><code>/api/jobs/{job_id}</code> - Details zu einem Job</li>
+                <li><code>/api/jobs/{job_id}/devices</code> - Geräte eines Jobs</li>
+                <li><code>/api/jobs/{job_id}/tasks</code> - Aufgaben eines Jobs</li>
+            </ul>
+            
+            <p>
+                <a href="/api-documentation" class="btn">API-Dokumentation</a>
+                <a href="/docs" class="btn">Swagger UI</a>
+            </p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2023-2025 Swiss Air Dry Team. Alle Rechte vorbehalten.</p>
+    </footer>
+</body>
+</html>

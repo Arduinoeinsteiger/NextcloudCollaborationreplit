@@ -15,7 +15,7 @@ from functools import lru_cache
 
 from sqlalchemy.orm import Session
 
-from . import database
+from swissairdry import database
 from .utils.mqtt_client import MQTTClient
 
 # Externe Integrationen (nur importieren wenn benötigt)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Dieses Skript aktualisiert Pydantic-Konfigurationen in der gesamten Codebasis,
-indem es 'orm_mode = True' durch 'from_attributes = True' ersetzt.
+indem es 'from_attributes = True' durch 'from_attributes = True' ersetzt.
 """
 
 import os
@@ -17,11 +17,11 @@ def update_pydantic_configs(directory):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
-                # Suche nach "orm_mode = True" in Konfigurationsklassen
-                if 'orm_mode = True' in content:
+                # Suche nach "from_attributes = True" in Konfigurationsklassen
+                if 'from_attributes = True' in content:
                     print(f"Aktualisiere {file_path}")
                     updated_content = re.sub(
-                        r'(\s+)class Config:\s+(\s+)orm_mode = True', 
+                        r'(\s+)class Config:\s+(\s+)from_attributes = True', 
                         r'\1class Config:\2from_attributes = True', 
                         content
                     )

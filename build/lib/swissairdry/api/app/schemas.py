@@ -67,7 +67,7 @@ class Device(DeviceBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+        from_attributes = True
 
 
 # --- Sensordaten-Schemas ---
@@ -96,7 +96,7 @@ class SensorData(SensorDataBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+        from_attributes = True
 
 
 class SensorDataResponse(BaseModel):

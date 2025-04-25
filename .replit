@@ -92,7 +92,7 @@ task = "shell.exec"
 args = "python -m pytest"
 
 [deployment]
-run = ["sh", "-c", "cd docker-base-api/app && python run.py"]
+run = ["sh", "-c", "cd swissairdry/api/app && python run2.py"]
 deploymentTarget = "cloudrun"
 
 [nix]

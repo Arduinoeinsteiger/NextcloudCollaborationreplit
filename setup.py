@@ -3,23 +3,14 @@
 
 """
 Diese Datei ist für die Kompatibilität mit älteren pip-Versionen und Installationswerkzeugen,
-die noch kein pyproject.toml unterstützen. Der Inhalt wird aus pyproject.toml gelesen.
+die noch kein pyproject.toml unterstützen.
 """
 
-import os
-from setuptools import setup, find_packages
 import sys
+from setuptools import setup, find_packages
 
 # Kompatibilität mit älteren Versionen der Build-Tools sicherstellen
-# Füge eine Ausgabe für Debugging hinzu
-print(f"Running setup.py with Python {sys.version}"),
-    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
-
-# Pakete automatisch finden
-from setuptools import find_packages
-
-packages = find_packages(include=["swissairdry", "swissairdry.*"]),
-    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
+print(f"Running setup.py with Python {sys.version}")
 
 setup(
     name="swissairdry",
@@ -27,10 +18,11 @@ setup(
     description="SwissAirDry - Eine Anwendung für die Verwaltung von Trocknungsgeräten und Felddienstoperationen",
     author="Swiss Air Dry Team",
     author_email="info@swissairdry.com",
-    packages=find_packages(include=['swissairdry', 'swissairdry.*']),  # Verwende die explizit definierte Package-Liste
-    package_dir={"": "."},  # Root-Verzeichnis explizit angeben
+    packages=find_packages(include=['swissairdry', 'swissairdry.*']),
+    package_dir={"": "."},
+    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
     python_requires=">=3.9",
-    include_package_data=True,  # Auch Nicht-Python-Dateien einbeziehen
+    include_package_data=True,
     install_requires=[
         "aiofiles>=0.8.0",
         "bcrypt>=3.2.0",
@@ -57,8 +49,4 @@ setup(
         "trafilatura>=1.2.0",
         "uvicorn>=0.17.0",
     ],
-),
-    package_data={'swissairdry': ['api/templates/*', 'api/static/*']},
-
-# Die setup()-Funktion wurde bereits aufgerufen, 
-# diese Zeilen würden einen Fehler verursachen und sind nicht mehr nötig
+)

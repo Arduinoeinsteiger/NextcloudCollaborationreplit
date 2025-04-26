@@ -99,7 +99,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Verwende eine spezifische Version von setuptools statt einer Versionsbeschränkung
-          python -m pip install setuptools==59.8.0 wheel
+          python -m pip install "setuptools==59.8.0" wheel
           python -m pip install pytest pytest-cov pytest-mock pytest-asyncio
       
       - name: Fix package directories
@@ -214,7 +214,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Verwende eine spezifische Version von setuptools statt einer Versionsbeschränkung
-          python -m pip install setuptools==59.8.0 wheel build twine
+          python -m pip install "setuptools==59.8.0" wheel build twine
           # Debug: Anzeigen der installierten Versionen
           pip list | grep -E 'setuptools|wheel|build|twine'
       

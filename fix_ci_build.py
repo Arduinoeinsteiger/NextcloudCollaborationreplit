@@ -191,7 +191,7 @@ def fix_pyproject_toml():
     if "wheel>=0.37.0" not in content:
         content = content.replace(
             'requires = ["setuptools>=42,<60.0.0", "wheel", "setuptools_scm[toml]>=6.0"]',
-            'requires = ["setuptools>=42,<60.0.0", "wheel>=0.37.0", "build>=0.7.0"]'
+            'requires = ["setuptools==59.8.0", "wheel>=0.37.0", "build>=0.7.0"]'
         )
     
     # Verwende package-finder

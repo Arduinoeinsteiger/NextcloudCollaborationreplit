@@ -71,7 +71,7 @@ prune */*/*/__pycache__
     else:
         # Erstelle eine minimal funktionierende pyproject.toml
         pyproject_content = """[build-system]
-requires = ["setuptools>=42", "wheel>=0.37.0", "build>=0.7.0"]
+requires = ["setuptools==59.8.0", "wheel>=0.37.0", "build>=0.7.0"]
 build-backend = "setuptools.build_meta"
 
 [project]

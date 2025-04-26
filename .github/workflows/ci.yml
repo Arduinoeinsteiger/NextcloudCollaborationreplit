@@ -213,9 +213,8 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          # Setze Setuptools-Version als Umgebungsvariable
-          SETUPTOOLS_VERSION="setuptools<60.0.0"
-          python -m pip install "$SETUPTOOLS_VERSION" wheel build twine
+          # Verwende eine spezifische Version von setuptools statt einer Versionsbeschränkung
+          python -m pip install setuptools==59.8.0 wheel build twine
           # Debug: Anzeigen der installierten Versionen
           pip list | grep -E 'setuptools|wheel|build|twine'
       

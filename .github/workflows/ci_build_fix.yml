@@ -91,7 +91,7 @@ jobs:
           python -c "import swissairdry; print(f'SwissAirDry Version: {getattr(swissairdry, \"__version__\", \"Unknown\")}')"
       
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3.1.3
+        uses: actions/upload-artifact@v3.0.0
         with:
           name: python-${{ matrix.python-version }}-package
           path: |

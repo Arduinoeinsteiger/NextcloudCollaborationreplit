@@ -206,7 +206,7 @@ jobs:
           python -m twine check dist/*
       
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v3  # Ältere stabile Version verwenden
+        uses: actions/upload-artifact@v3.0.0  # Spezifische stabile Version verwenden
         with:
           name: python-package-${{ matrix.python-version }}
           path: |

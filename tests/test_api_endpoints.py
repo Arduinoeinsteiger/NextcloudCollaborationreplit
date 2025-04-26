@@ -6,6 +6,7 @@ Tests für die API-Endpunkte des SwissAirDry-Projekts
 """
 
 import pytest
+from datetime import datetime
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
@@ -78,7 +79,9 @@ class TestAPIEndpoints:
             id=1,
             device_id="device1",
             name="Testgerät 1",
-            type="dehumidifier"
+            type="dehumidifier",
+            status="active",
+            created_at=datetime.now()
         )
         
         # Mock konfigurieren

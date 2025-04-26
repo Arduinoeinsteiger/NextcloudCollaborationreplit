@@ -98,9 +98,8 @@ jobs:
       - name: Install core dependencies
         run: |
           python -m pip install --upgrade pip
-          # Setze Setuptools-Version als Umgebungsvariable
-          SETUPTOOLS_VERSION="setuptools<60.0.0"
-          python -m pip install "$SETUPTOOLS_VERSION" wheel
+          # Verwende eine spezifische Version von setuptools statt einer Versionsbeschränkung
+          python -m pip install setuptools==59.8.0 wheel
           python -m pip install pytest pytest-cov pytest-mock pytest-asyncio
       
       - name: Fix package directories

@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 10  # Setze Zeitlimit für diesen Job
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -28,7 +28,7 @@ jobs:
           python-version: '3.11'
       
       - name: Cache Python dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-lint-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
@@ -80,7 +80,7 @@ jobs:
     
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -88,7 +88,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: Cache Python dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-test-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
@@ -151,10 +151,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
@@ -202,7 +202,7 @@ jobs:
     
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -250,7 +250,7 @@ jobs:
           python -m twine check dist/*
       
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package-${{ matrix.python-version }}
           path: |
@@ -264,7 +264,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Check for composer files
         id: check_php

@@ -11,7 +11,8 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime
 from sqlalchemy.orm import Session
 
-import models, schemas
+from swissairdry.api.app import models
+from swissairdry import schemas
 
 
 # --- Geräte-Operationen ---

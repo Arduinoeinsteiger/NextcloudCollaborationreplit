@@ -28,16 +28,16 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-import database
-import models
-import schemas
-import crud
-import mqtt
-import utils
+from swissairdry.api.app import database
+from swissairdry.api.app import models
+from swissairdry import schemas
+from swissairdry import crud
+from swissairdry.api.app import mqtt
+from swissairdry.api.app import utils
 
 # API-Routen importieren
-from routes import location
-from routes import deck  # Umbenannt zu Jobs Management
+from swissairdry.api.app.routes import location
+from swissairdry.api.app.routes import deck  # Umbenannt zu Jobs Management
 
 # Logging einrichten
 logging.basicConfig(
@@ -168,7 +168,7 @@ async def startup_event():
         if os.getenv("BLE_ENABLED", "").lower() == "true":
             # Importiere hier, um Zirkelimporte zu vermeiden
             import ble_scanner
-            from routes.location import get_ble_manager
+            from swissairdry.api.app.routes.location import get_ble_manager
             
             # BLE-Scanner initialisieren
             ble_manager = get_ble_manager()

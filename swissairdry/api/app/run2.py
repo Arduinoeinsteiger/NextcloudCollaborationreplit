@@ -160,7 +160,8 @@ async def startup_event():
     mqtt_password = os.getenv("MQTT_PASSWORD", "")
     
     try:
-        mqtt_client = mqtt.MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password)
+        from swissairdry.api.app.mqtt import MQTTClient
+        mqtt_client = MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password)
         await mqtt_client.connect()
         logger.info(f"MQTT-Client verbunden mit {mqtt_host}:{mqtt_port}")
         

@@ -52,7 +52,7 @@ setup(
         "python-multipart>=0.0.5",
         "qrcode>=7.3.0",
         "requests>=2.27.0",
-        "setuptools>=42,<60.0.0",
+        "setuptools==59.8.0",
         "sqlalchemy>=1.4.0,<2.0.0",
         "trafilatura>=1.2.0",
         "uvicorn>=0.17.0",

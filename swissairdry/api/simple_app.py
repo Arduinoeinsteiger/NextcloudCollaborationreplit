@@ -292,7 +292,18 @@ async def startup_event():
             # Eindeutige Client-ID für diesen Client generieren
             import uuid
             import time
-            client_id = f"sard-simple-{str(uuid.uuid4())[0:6]}-{int(time.time() * 1000)}"
+            import os
+            import random
+            import string
+            
+            # Mehr Zufallsfaktoren für garantiert einzigartige Client-ID
+            uid = str(uuid.uuid4()).replace('-', '')[:8]
+            timestamp = int(time.time() * 1000)
+            pid = os.getpid()
+            random_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+            
+            # Format: sard-simple-{uuid}-{timestamp}-{pid}-{random}
+            client_id = f"sard-simple-{uid}-{timestamp}-{pid}-{random_str}"
             print(f"MQTT-Client-ID: {client_id}")
             
             mqtt_client = MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password, client_id=client_id)

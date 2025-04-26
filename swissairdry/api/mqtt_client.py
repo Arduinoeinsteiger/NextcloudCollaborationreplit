@@ -15,6 +15,7 @@ import uuid
 import time
 import random
 import string
+import socket
 from typing import Dict, Any, Callable, Optional, List
 
 # Verwende die MQTT-Bibliothek, die mit den meisten Python-Versionen funktioniert
@@ -83,11 +84,15 @@ class MQTTClient:
                 timestamp = int(time.time())
                 self.client_id = f"{self.user_client_id}-{unique_suffix}-{timestamp}"
             else:
-                # Generiere eine vollständig zufällige Client-ID
+                # Generiere eine garantiert eindeutige Client-ID mit mehreren Faktoren
                 unique_id = str(uuid.uuid4()).replace('-', '')[:8]
                 timestamp = int(time.time() * 1000)  # Millisekunden für noch mehr Einzigartigkeit
+                pid = os.getpid()  # Process-ID für Eindeutigkeit bei mehreren Prozessen
+                hostname = socket.gethostname()[:8]  # Hostname für Eindeutigkeit auf mehreren Hosts
                 random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
-                self.client_id = f"sard-{unique_id}-{timestamp}-{random_suffix}"
+                
+                # Format: sard-{uuid}-{timestamp}-{pid}-{hostname}-{random}
+                self.client_id = f"sard-{unique_id}-{timestamp}-{pid}-{hostname}-{random_suffix}"
             
             self.logger.info(f"Sichere MQTT-Client-ID generiert: {self.client_id}")
             

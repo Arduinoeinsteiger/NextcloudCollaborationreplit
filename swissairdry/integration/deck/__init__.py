@@ -51,7 +51,7 @@ class DeckAPIClient:
         return 1
     
     def create_card(self, board_id: int, stack_id: int, title: str, description: str = "", 
-                   labels: List[int] = None, assignees: List[int] = None, due_date: str = None) -> int:
+                   labels: Optional[List[int]] = None, assignees: Optional[List[int]] = None, due_date: Optional[str] = None) -> int:
         """Erstellt eine virtuelle Karte (Platzhalter)."""
         return 1
     

@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """
-Dieses Skript aktualisiert alle GitHub Actions auf die neuesten Versionen in der CI-Workflow-Datei.
+Dieses Skript aktualisiert alle GitHub Actions auf stabile Versionen in den CI-Workflow-Dateien.
 Es aktualisiert:
-- actions/checkout von v3 auf v4
-- actions/setup-python von v4 (beibehaltend)
-- actions/cache von v3 auf v4
-- actions/upload-artifact von v3 auf v4
+- actions/checkout von v4 auf v3 (stabiler)
+- actions/setup-python bleibt auf v4
+- actions/cache von v4 auf v3 (stabiler)
+- actions/upload-artifact von v4 auf v3 (stabiler)
 - actions/setup-node von v3 auf v4
-- andstor/file-existence-action von v2 auf v2 (beibehaltend)
-- shivammathur/setup-php von v2 auf v2 (beibehaltend)
+- andstor/file-existence-action bleibt auf v2
+- shivammathur/setup-php bleibt auf v2
+
+Diese Änderungen sind notwendig, um CI-Build-Fehler zu vermeiden, insbesondere:
+"Missing command type for actions/checkout@v4.0.0"
 """
 
 import re
 import os
 
 def update_action_versions(file_path):
-    """GitHub Actions auf neueste Versionen aktualisieren."""
+    """GitHub Actions auf stabile Versionen aktualisieren."""
     updates = {
-        r'uses: actions/checkout@v3': 'uses: actions/checkout@v4',
-        r'uses: actions/cache@v3': 'uses: actions/cache@v4',
-        r'uses: actions/upload-artifact@v3': 'uses: actions/upload-artifact@v4',
+        # Wir kehren zu v3 zurück, das stabiler ist
+        r'uses: actions/checkout@v4': 'uses: actions/checkout@v3',
+        # Cache v3 ist stabiler
+        r'uses: actions/cache@v4': 'uses: actions/cache@v3',
+        # Upload artifact v3 ist stabiler
+        r'uses: actions/upload-artifact@v4': 'uses: actions/upload-artifact@v3',
+        # Node bleibt auf v4
         r'uses: actions/setup-node@v3': 'uses: actions/setup-node@v4',
     }
     

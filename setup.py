@@ -32,6 +32,7 @@ setup(
         "flask>=2.0.0",
         "flask-cors>=3.0.10",
         "flask-sqlalchemy>=2.5.0",
+        "httpx>=0.22.0",  # Für starlette.testclient
         "jinja2>=3.0.0",
         "markdown>=3.3.0",
         "paho-mqtt>=1.6.0",

@@ -269,8 +269,7 @@ class Alert(AlertBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Energiekosten-Schemas ---
@@ -295,8 +294,7 @@ class EnergyCost(EnergyCostBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- API-Schlüssel-Schemas ---
@@ -322,8 +320,7 @@ class APIKey(APIKeyBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Gerätebefehle-Schema ---

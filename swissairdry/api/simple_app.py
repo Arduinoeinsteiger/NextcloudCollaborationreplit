@@ -11,6 +11,11 @@ import os
 import json
 import asyncio
 import logging
+import uuid
+import time
+import random
+import string
+import socket
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
@@ -290,20 +295,17 @@ async def startup_event():
             print(f"Verbinde mit MQTT-Broker {mqtt_host}:{mqtt_port}...")
             
             # Eindeutige Client-ID für diesen Client generieren
-            import uuid
-            import time
-            import os
-            import random
-            import string
+            # Alle Imports bereits am Anfang der Datei
             
             # Mehr Zufallsfaktoren für garantiert einzigartige Client-ID
             uid = str(uuid.uuid4()).replace('-', '')[:8]
             timestamp = int(time.time() * 1000)
             pid = os.getpid()
+            hostname = socket.gethostname()[:8] if hasattr(socket, 'gethostname') else 'local'
             random_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
             
-            # Format: sard-simple-{uuid}-{timestamp}-{pid}-{random}
-            client_id = f"sard-simple-{uid}-{timestamp}-{pid}-{random_str}"
+            # Format: sard-simple-{uuid}-{timestamp}-{pid}-{hostname}-{random}
+            client_id = f"sard-simple-{uid}-{timestamp}-{pid}-{hostname}-{random_str}"
             print(f"MQTT-Client-ID: {client_id}")
             
             mqtt_client = MQTTClient(mqtt_host, mqtt_port, mqtt_user, mqtt_password, client_id=client_id)

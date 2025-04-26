@@ -12,8 +12,9 @@ import sys
 import asyncio
 import time
 import logging
+import contextlib
 from datetime import datetime
-from typing import Dict, Optional, List, Any, Union
+from typing import Dict, Optional, List, Any, Union, AsyncIterator
 
 # Füge das aktuelle Verzeichnis zum Python-Pfad hinzu
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,45 +60,6 @@ except ImportError:
     DOCS_AVAILABLE = False
     logger.warning("API-Dokumentationsmodul nicht gefunden. Dokumentationsrouten deaktiviert.")
 
-# Datenbank initialisieren
-database.Base.metadata.create_all(bind=database.engine)
-
-# FastAPI-App erstellen
-app = FastAPI(
-    title="SwissAirDry API",
-    description="API für die Verwaltung von SwissAirDry-Geräten und -Daten",
-    version="1.0.0",
-)
-
-# API-Router registrieren
-app.include_router(deck.router)
-app.include_router(location.router)
-
-# Dokumentationsrouten registrieren, wenn verfügbar
-if DOCS_AVAILABLE:
-    try:
-        register_docs_routes(app)
-        logger.info("API-Dokumentationsrouten erfolgreich registriert")
-    except Exception as e:
-        logger.error(f"Fehler beim Registrieren der API-Dokumentationsrouten: {e}")
-        DOCS_AVAILABLE = False
-
-# CORS Middleware hinzufügen
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In Produktion einschränken
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Templates und statische Dateien einrichten
-templates_dir = os.path.join(os.path.dirname(__file__), "templates")
-static_dir = os.path.join(os.path.dirname(__file__), "static")
-
-templates = Jinja2Templates(directory=templates_dir)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
 # MQTT-Client initialisieren
 mqtt_client = None
 
@@ -141,16 +103,19 @@ async def check_mqtt_connection():
             await asyncio.sleep(10)  # Bei Fehler 10 Sekunden warten
 
 
-# Verwende die on_event-Methode für Kompatibilität mit älteren FastAPI-Versionen
-# TODO: Wenn FastAPI aktualisiert wird, sollte dies durch @app.lifespan ersetzt werden
-# Siehe: https://fastapi.tiangolo.com/advanced/events/
-# Die folgende Zeile unterdrückt die Warnung für @app.on_event
-# Direkt danach auf eine neue Zeile schreiben, damit die Warnung unterdrückt wird
-@app.on_event("startup")  # noqa: F821
-async def startup_event():
-    """Wird beim Start der Anwendung aufgerufen."""
-    global mqtt_client
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """
+    Lifespan-Handler für FastAPI.
     
+    Diese Funktion übernimmt die Startup- und Shutdown-Logik in einem einzigen
+    asynchronen Kontextmanager gemäß der modernen FastAPI-Lifespan-API.
+    Siehe: https://fastapi.tiangolo.com/advanced/events/
+    """
+    global mqtt_client
+    background_tasks = []
+    
+    # --- Startup-Logik ---
     logger.info("API-Server wird gestartet...")
     
     # MQTT-Client initialisieren
@@ -185,17 +150,21 @@ async def startup_event():
         logger.warning("MQTT-Verbindung fehlgeschlagen, Server läuft ohne MQTT-Unterstützung")
     
     # Hintergrundaufgaben starten
-    asyncio.create_task(check_primary_server_availability())
-    asyncio.create_task(check_mqtt_connection())
+    background_tasks.append(asyncio.create_task(check_primary_server_availability()))
+    background_tasks.append(asyncio.create_task(check_mqtt_connection()))
     
     logger.info("API-Server erfolgreich gestartet")
-
-
-# TODO: Wenn FastAPI aktualisiert wird, sollte dies durch @app.lifespan ersetzt werden
-@app.on_event("shutdown")  # noqa: F821
-async def shutdown_event():
-    """Wird beim Herunterfahren der Anwendung aufgerufen."""
+    
+    # Kontrolle an FastAPI zurückgeben (yield anstelle von return in Kontextmanagern)
+    yield
+    
+    # --- Shutdown-Logik ---
     logger.info("API-Server wird heruntergefahren...")
+    
+    # Hintergrundaufgaben abbrechen
+    for task in background_tasks:
+        if not task.done():
+            task.cancel()
     
     # BLE-Scanner stoppen, wenn er läuft
     if os.getenv("BLE_ENABLED", "").lower() == "true":
@@ -215,6 +184,190 @@ async def shutdown_event():
     if mqtt_client:
         await mqtt_client.disconnect()
         logger.info("MQTT-Client getrennt")
+
+
+# Datenbank initialisieren
+database.Base.metadata.create_all(bind=database.engine)
+
+# FastAPI-App erstellen
+app = FastAPI(
+    title="SwissAirDry API",
+    description="API für die Verwaltung von SwissAirDry-Geräten und -Daten",
+    version="1.0.0",
+    lifespan=lifespan,  # Verwende den modernen Lifespan-Handler
+)
+
+# API-Router registrieren
+app.include_router(deck.router)
+app.include_router(location.router)
+
+# Dokumentationsrouten registrieren, wenn verfügbar
+if DOCS_AVAILABLE:
+    try:
+        register_docs_routes(app)
+        logger.info("API-Dokumentationsrouten erfolgreich registriert")
+    except Exception as e:
+        logger.error(f"Fehler beim Registrieren der API-Dokumentationsrouten: {e}")
+        DOCS_AVAILABLE = False
+
+# CORS Middleware hinzufügen
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In Produktion einschränken
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Templates und statische Dateien einrichten
+templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+
+templates = Jinja2Templates(directory=templates_dir)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+# API-Endpunkte
+@app.get("/api/devices", response_model=List[schemas.Device])
+async def get_devices(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(database.get_db)
+):
+    """Gibt eine Liste aller Geräte zurück."""
+    devices = crud.get_devices(db, skip=skip, limit=limit)
+    return devices
+
+
+@app.post("/api/devices", response_model=schemas.Device)
+async def create_device(
+    device: schemas.DeviceCreate, 
+    db: Session = Depends(database.get_db)
+):
+    """Erstellt ein neues Gerät."""
+    db_device = crud.get_device_by_device_id(db, device_id=device.device_id)
+    if db_device:
+        raise HTTPException(
+            status_code=400, 
+            detail="Gerät mit dieser ID existiert bereits"
+        )
+    return crud.create_device(db=db, device=device)
+
+
+@app.get("/api/devices/{device_id}", response_model=schemas.Device)
+async def get_device(device_id: str, db: Session = Depends(database.get_db)):
+    """Gibt ein Gerät anhand seiner ID zurück."""
+    db_device = crud.get_device_by_device_id(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Gerät nicht gefunden")
+    return db_device
+
+
+@app.put("/api/devices/{device_id}", response_model=schemas.Device)
+async def update_device(
+    device_id: str, 
+    device: schemas.DeviceUpdate, 
+    db: Session = Depends(database.get_db)
+):
+    """Aktualisiert ein Gerät."""
+    db_device = crud.get_device_by_device_id(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Gerät nicht gefunden")
+    return crud.update_device(db=db, device_id=device_id, device=device)
+
+
+@app.delete("/api/devices/{device_id}", response_model=Dict[str, Any])
+async def delete_device(device_id: str, db: Session = Depends(database.get_db)):
+    """Löscht ein Gerät."""
+    db_device = crud.get_device_by_device_id(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Gerät nicht gefunden")
+    crud.delete_device(db=db, device_id=device_id)
+    return {"status": "success", "message": f"Gerät {device_id} wurde gelöscht"}
+
+
+@app.post("/api/devices/{device_id}/data", response_model=schemas.SensorData)
+async def create_sensor_data(
+    device_id: str, 
+    data: schemas.SensorDataCreate, 
+    db: Session = Depends(database.get_db)
+):
+    """Speichert neue Sensordaten für ein Gerät."""
+    db_device = crud.get_device_by_device_id(db, device_id=device_id)
+    if db_device is None:
+        # Kein Fehler zurückgeben, stattdessen nur speichern
+        logger.warning(f"Sensordaten für unbekanntes Gerät {device_id} empfangen")
+        # Gerät automatisch erstellen
+        device = schemas.DeviceCreate(
+            device_id=device_id,
+            name=f"Auto: {device_id}",
+            type="unknown",
+            status="online"
+        )
+        db_device = crud.create_device(db=db, device=device)
+        logger.info(f"Gerät {device_id} automatisch erstellt")
+    
+    return crud.create_sensor_data(db=db, device_id=device_id, data=data)
+
+
+@app.get("/api/devices/{device_id}/data", response_model=List[schemas.SensorData])
+async def get_sensor_data(
+    device_id: str, 
+    limit: int = 100, 
+    db: Session = Depends(database.get_db)
+):
+    """Gibt die Sensordaten eines Geräts zurück."""
+    db_device = crud.get_device_by_device_id(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Gerät nicht gefunden")
+    
+    return crud.get_sensor_data_by_device_id(db, device_id=device_id, limit=limit)
+
+
+@app.post("/api/devices/{device_id}/command", response_model=Dict[str, Any])
+async def send_device_command(
+    device_id: str, 
+    command: schemas.DeviceCommand, 
+    db: Session = Depends(database.get_db)
+):
+    """Sendet einen Befehl an ein Gerät über MQTT."""
+    global mqtt_client
+    
+    # Prüfen, ob das Gerät existiert
+    db_device = crud.get_device_by_device_id(db, device_id=device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Gerät nicht gefunden")
+    
+    # Befehl über MQTT senden
+    if mqtt_client and mqtt_client.is_connected():
+        # Topic-Format: swissairdry/DEVICE_ID/command
+        topic = f"swissairdry/{device_id}/command"
+        # Payload als JSON
+        payload = {
+            "command": command.command,
+            "value": command.value,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        try:
+            # Nachricht senden
+            success = await mqtt_client.publish(topic, payload)
+            if success:
+                logger.info(f"Befehl an {device_id} gesendet: {command.command}")
+                return {"status": "success", "message": f"Befehl {command.command} an Gerät {device_id} gesendet"}
+            else:
+                logger.error(f"Fehler beim Senden des Befehls an {device_id}")
+                raise HTTPException(status_code=500, detail="Fehler beim Senden des Befehls")
+        except Exception as e:
+            logger.error(f"Exception beim Senden des Befehls an {device_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Fehler: {str(e)}")
+    else:
+        # MQTT-Client nicht verbunden
+        logger.error("MQTT-Client nicht verbunden, Befehl kann nicht gesendet werden")
+        raise HTTPException(
+            status_code=503, 
+            detail="MQTT-Verbindung nicht verfügbar, Befehl kann nicht gesendet werden"
+        )
 
 
 @app.middleware("http")

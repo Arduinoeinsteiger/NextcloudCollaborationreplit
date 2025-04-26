@@ -65,9 +65,8 @@ class Device(DeviceBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-        # orm_mode has been renamed to from_attributes in Pydantic v2
+    model_config = {"from_attributes": True}
+    # class Config mit from_attributes=True ersetzt durch model_config für Pydantic v2
 
 
 # --- Sensordaten-Schemas ---
@@ -94,9 +93,8 @@ class SensorData(SensorDataBase):
     id: int
     device_id: str
 
-    class Config:
-        from_attributes = True
-        # orm_mode has been renamed to from_attributes in Pydantic v2
+    model_config = {"from_attributes": True}
+    # class Config mit from_attributes=True ersetzt durch model_config für Pydantic v2
 
 
 class SensorDataResponse(BaseModel):
@@ -145,8 +143,7 @@ class Customer(CustomerBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Auftrags-Schemas ---
@@ -193,8 +190,7 @@ class Job(JobBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Bericht-Schemas ---
@@ -219,8 +215,7 @@ class Report(ReportBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Benutzer-Schemas ---
@@ -246,8 +241,7 @@ class User(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # --- Warnung-Schemas ---

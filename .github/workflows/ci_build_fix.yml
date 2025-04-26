@@ -22,7 +22,7 @@ jobs:
     
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
@@ -90,7 +90,7 @@ jobs:
           python -c "import swissairdry; print(f'SwissAirDry Version: {getattr(swissairdry, \"__version__\", \"Unknown\")}')"
       
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-${{ matrix.python-version }}-package
           path: |

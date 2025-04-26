@@ -45,7 +45,7 @@ class TestAPIEndpoints:
         """Testet den Endpunkt zum Abrufen aller Geräte"""
         # Erstellen echter Device-Objekte als Mock-Daten
         device1 = models.Device(
-            id=1,
+            id="1",  # String-ID entsprechend dem Datenbankmodell
             device_id="device1",
             name="Testgerät 1",
             type="dehumidifier",
@@ -53,7 +53,7 @@ class TestAPIEndpoints:
             created_at=datetime.now()
         )
         device2 = models.Device(
-            id=2,
+            id="2",  # String-ID entsprechend dem Datenbankmodell
             device_id="device2",
             name="Testgerät 2",
             type="sensor",
@@ -76,7 +76,7 @@ class TestAPIEndpoints:
         """Testet den Endpunkt zum Abrufen eines Geräts anhand seiner ID"""
         # Mock-Daten für den Test
         mock_device = models.Device(
-            id=1,
+            id="1",  # String-ID entsprechend dem Datenbankmodell
             device_id="device1",
             name="Testgerät 1",
             type="dehumidifier",

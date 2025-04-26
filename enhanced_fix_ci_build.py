@@ -309,7 +309,7 @@ def fix_pyproject_toml():
         print("Erstelle pyproject.toml...")
         with open(pyproject_path, "w") as f:
             f.write("""[build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=42,<60.0.0", "wheel>=0.37.0"]
 build-backend = "setuptools.build_meta"
 
 [project]

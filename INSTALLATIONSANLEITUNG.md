@@ -1,5 +1,7 @@
 # SwissAirDry Installationsanleitung
 
+> **HINWEIS: Diese Anleitung ist veraltet. Bitte verwenden Sie die neue [GENERALANLEITUNG.md](./GENERALANLEITUNG.md) für aktuelle Installations- und Konfigurationsanweisungen.**
+
 Diese Anleitung beschreibt die Installation und Konfiguration des SwissAirDry-Systems. Das System besteht aus mehreren Komponenten, die einzeln oder zusammen installiert werden können.
 
 ## Systemvoraussetzungen

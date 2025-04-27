@@ -38,7 +38,8 @@ from swissairdry.api.app import utils
 
 # API-Routen importieren
 from swissairdry.api.app.routes import location
-from swissairdry.api.app.routes import deck  # Umbenannt zu Jobs Management
+from swissairdry.api.app.routes import deck  # Alte Deck-Integration (wird durch ExApp ersetzt)
+from swissairdry.api.app.routes import exapp  # Neue ExApp-Integration
 
 # Logging einrichten
 logging.basicConfig(
@@ -200,6 +201,7 @@ app = FastAPI(
 # API-Router registrieren
 app.include_router(deck.router)
 app.include_router(location.router)
+app.include_router(exapp.router)
 
 # Dokumentationsrouten registrieren, wenn verfügbar
 if DOCS_AVAILABLE:

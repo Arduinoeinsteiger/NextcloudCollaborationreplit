@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict
 
 # Router erstellen
 router = APIRouter(
-    prefix="/exapp",
+    prefix="/api/exapp",
     tags=["exapp"],
     responses={404: {"description": "Not found"}},
 )

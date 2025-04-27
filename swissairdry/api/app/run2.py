@@ -40,6 +40,7 @@ from swissairdry.api.app import utils
 from swissairdry.api.app.routes import location
 from swissairdry.api.app.routes import deck  # Alte Deck-Integration (wird durch ExApp ersetzt)
 from swissairdry.api.app.routes import exapp  # Neue ExApp-Integration
+from swissairdry.api.app.routes import dashboard  # Anpassbares Dashboard mit Drag-and-Drop
 
 # Logging einrichten
 logging.basicConfig(

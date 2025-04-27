@@ -1,0 +1,27 @@
+{
+  "widgets": [
+    {
+      "id": "device-status",
+      "position": 0,
+      "visible": true,
+      "size": "medium"
+    },
+    {
+      "id": "temperature-chart",
+      "position": 1,
+      "visible": true,
+      "size": "large",
+      "refresh_interval": 60
+    },
+    {
+      "id": "system-status",
+      "position": 2,
+      "visible": true,
+      "size": "small"
+    }
+  ],
+  "layout": "grid",
+  "theme": "light",
+  "auto_refresh": true,
+  "refresh_interval": 60
+}

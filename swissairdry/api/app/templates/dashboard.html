@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwissAirDry Dashboard</title>
+    
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <!-- Chart.js für Diagramme -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1 class="dashboard-title">SwissAirDry Dashboard</h1>
+            
+            <div class="dashboard-actions">
+                <button id="toggle-sidebar" class="btn btn-icon-only" title="Seitenleiste umschalten">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <button id="save-config" class="btn btn-primary" title="Konfiguration speichern">
+                    <i class="fas fa-save"></i>
+                    <span>Speichern</span>
+                </button>
+                
+                <button id="reset-config" class="btn btn-secondary" title="Zurücksetzen">
+                    <i class="fas fa-undo"></i>
+                    <span>Zurücksetzen</span>
+                </button>
+                
+                <button id="toggle-theme" class="btn btn-secondary btn-icon-only" title="Theme umschalten">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+        
+        <div class="dashboard-main">
+            <aside class="dashboard-sidebar">
+                <div id="widget-selector">
+                    <!-- Widget-Auswahl wird via JavaScript geladen -->
+                    <div class="loading">Lade Widgets...</div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3>Dashboard-Einstellungen</h3>
+                    
+                    <div class="form-group">
+                        <label for="layout-select">Layout</label>
+                        <select id="layout-select" class="form-control">
+                            <option value="grid">Raster</option>
+                            <option value="column">Spalten</option>
+                            <option value="flow">Fließend</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="refresh-interval">Aktualisierungsintervall (Sekunden)</label>
+                        <input type="number" id="refresh-interval" class="form-control" min="10" max="3600" step="10" value="60">
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="checkbox">
+                            <input type="checkbox" id="auto-refresh" checked>
+                            <label for="auto-refresh">Automatische Aktualisierung</label>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+            
+            <main class="dashboard-content">
+                <div id="dashboard" class="dashboard-grid">
+                    <!-- Dashboard-Widgets werden via JavaScript geladen -->
+                    <div class="loading-container">
+                        <div class="loading">Dashboard wird geladen...</div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-instructions">
+                    <h2>So verwenden Sie das Dashboard</h2>
+                    <ul>
+                        <li><i class="fas fa-grip-lines"></i> <strong>Ziehen Sie Widgets</strong> per Drag-and-Drop, um sie neu anzuordnen</li>
+                        <li><i class="fas fa-plus-circle"></i> <strong>Fügen Sie neue Widgets</strong> aus der Seitenleiste per Klick oder Drag-and-Drop hinzu</li>
+                        <li><i class="fas fa-cog"></i> <strong>Konfigurieren Sie Widgets</strong> über das Einstellungs-Symbol</li>
+                        <li><i class="fas fa-times-circle"></i> <strong>Entfernen Sie Widgets</strong> über das X-Symbol</li>
+                        <li><i class="fas fa-save"></i> <strong>Speichern Sie Ihre Konfiguration</strong>, um sie beizubehalten</li>
+                    </ul>
+                </div>
+            </main>
+        </div>
+        
+        <footer class="dashboard-footer">
+            &copy; 2025 SwissAirDry GmbH | <a href="/privacy">Datenschutz</a> | <a href="/imprint">Impressum</a>
+        </footer>
+    </div>
+    
+    <!-- Modals -->
+    <div id="widget-settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Widget-Einstellungen</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Wird dynamisch befüllt -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="cancel">Abbrechen</button>
+                <button class="btn btn-primary" data-action="save">Speichern</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        // Theme-Toggle
+        document.getElementById('toggle-theme').addEventListener('click', function() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            
+            // Icon aktualisieren
+            const icon = this.querySelector('i');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+        
+        // Seitenleiste umschalten
+        document.getElementById('toggle-sidebar').addEventListener('click', function() {
+            const sidebar = document.querySelector('.dashboard-sidebar');
+            sidebar.classList.toggle('collapsed');
+        });
+        
+        // Theme aus localStorage laden
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                const icon = document.querySelector('#toggle-theme i');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        });
+    </script>
+</body>
+</html>

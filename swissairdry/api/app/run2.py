@@ -203,6 +203,7 @@ app = FastAPI(
 app.include_router(deck.router)
 app.include_router(location.router)
 app.include_router(exapp.router)
+app.include_router(dashboard.router)
 
 # Dokumentationsrouten registrieren, wenn verfügbar
 if DOCS_AVAILABLE:

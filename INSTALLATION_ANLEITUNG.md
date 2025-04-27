@@ -1,5 +1,7 @@
 # SwissAirDry Installations-Anleitung
 
+> **HINWEIS: Diese Anleitung ist veraltet. Bitte verwenden Sie die neue [GENERALANLEITUNG.md](./GENERALANLEITUNG.md) für aktuelle Installations- und Konfigurationsanweisungen.**
+
 Diese Anleitung beschreibt die Installation des SwissAirDry-Systems mit allen Komponenten:
 
 - Nextcloud

@@ -20,9 +20,15 @@ from .utils.mqtt_client import MQTTClient
 
 # Externe Integrationen (nur importieren wenn benötigt)
 # Die imports werden hier als Variablen definiert, um sie lazy zu laden
+# HINWEIS: Die alte Deck-Integration wird durch die ExApp ersetzt
+# Die alten Variablen bleiben für Kompatibilität, nutzen aber die neue Implementierung
+exapp_integration_module = None
+exapp_client_module = None
+location_integration_module = None
+
+# Alte Variablennamen für Kompatibilität
 deck_integration_module = None
 deck_client_module = None
-location_integration_module = None
 
 # Logger konfigurieren
 logging.basicConfig(level=logging.INFO)
@@ -66,21 +72,50 @@ def get_mqtt_client() -> MQTTClient:
 
 
 # Lazy-Loading für die Integration-Module
+def _load_integration_modules():
+    """
+    Lade die Nextcloud ExApp Integration Module bei Bedarf
+    
+    Diese Funktion lädt die neuen ExApp-Module und setzt die alten deck_*-Variablen
+    für Kompatibilität mit bestehendem Code.
+    """
+    global exapp_integration_module, exapp_client_module, location_integration_module
+    global deck_integration_module, deck_client_module  # Für Kompatibilität
+    
+    if exapp_integration_module is None:
+        try:
+            # Neue ExApp-Module laden
+            from swissairdry.integration.exapp import integration as exapp_integration_module
+            from swissairdry.integration.exapp import client as exapp_client_module
+            from swissairdry.integration.exapp import location_integration as location_integration_module
+            
+            # Für Kompatibilität alten Variablen zuweisen (werden nicht geladen, nur referenziert)
+            deck_integration_module = exapp_integration_module 
+            deck_client_module = exapp_client_module
+            
+            logger.info("Nextcloud ExApp Integration Module geladen")
+        except ImportError as e:
+            # Fallback auf alte Deck-Module, falls ExApp nicht verfügbar
+            try:
+                from swissairdry.integration.deck import integration as deck_integration_module
+                from swissairdry.integration.deck import client as deck_client_module
+                from swissairdry.integration.deck import location_integration as location_integration_module
+                
+                # Alte Module für neue Variablennamen
+                exapp_integration_module = deck_integration_module
+                exapp_client_module = deck_client_module
+                
+                logger.warning("ExApp Module nicht gefunden, Fallback auf alte Deck Integration Module")
+            except ImportError as e2:
+                logger.error(f"Fehler beim Laden der Integration Module: {e2}")
+                raise
+
+# Kompatibilitätsfunktion für alte Aufrufe
 def _load_deck_modules():
     """
-    Lade die Nextcloud Deck Integration Module bei Bedarf
+    Kompatibilitätsfunktion für alte Aufrufe
     """
-    global deck_integration_module, deck_client_module, location_integration_module
-    
-    if deck_integration_module is None:
-        try:
-            from swissairdry.integration.deck import integration as deck_integration_module
-            from swissairdry.integration.deck import client as deck_client_module
-            from swissairdry.integration.deck import location_integration as location_integration_module
-            logger.info("Nextcloud Deck Integration Module geladen")
-        except ImportError as e:
-            logger.error(f"Fehler beim Laden der Deck Integration Module: {e}")
-            raise
+    _load_integration_modules()
 
 
 @lru_cache

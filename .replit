@@ -32,6 +32,10 @@ args = "Backup Simple API"
 task = "workflow.run"
 args = "Flask Simple API"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Minimal API"
+
 [[workflows.workflow]]
 name = "SwissAirDry API"
 author = "agent"
@@ -112,6 +116,15 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd swissairdry/api && python flask_simple.py"
+waitForPort = 5001
+
+[[workflows.workflow]]
+name = "Minimal API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd swissairdry/api && python minimal_http_server.py"
 waitForPort = 5001
 
 [deployment]

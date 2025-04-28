@@ -127,6 +127,57 @@ function check_docker_compose() {
         success_message "Docker-Compose-Datei verwendet keine ghcr.io-Referenzen."
     fi
     
+    # Korrigiere Portprobleme, falls vorhanden
+    status_message "Überprüfe Port-Konfigurationen..."
+    
+    # Überprüfe Portkonflikte zwischen Nextcloud und Nginx
+    if grep -q "80:80" "$docker_compose_file" && grep -q "nextcloud" "$docker_compose_file"; then
+        warning_message "Mögliche Portkonflikte zwischen Nextcloud und Nginx für Ports 80/443 gefunden"
+        
+        # Frage nach Bestätigung für Änderungen
+        read -p "Möchten Sie die Nextcloud-Ports ändern, um Konflikte zu vermeiden? (j/n): " port_choice
+        
+        if [[ "$port_choice" == "j" || "$port_choice" == "J" ]]; then
+            # Erstelle Backup, falls noch nicht getan
+            if [ ! -f "${docker_compose_file}.backup" ]; then
+                cp "$docker_compose_file" "${docker_compose_file}.backup"
+            fi
+            
+            # Ändere Nextcloud-Ports auf 8080/8443
+            nextcloud_service=$(grep -A 20 "nextcloud:" "$docker_compose_file" | grep -B 20 -m 1 "^\s*[a-zA-Z]")
+            if [[ -n "$nextcloud_service" ]]; then
+                status_message "Passe Nextcloud-Service für Ports 8080/8443 an..."
+                
+                # Sicherer Ansatz: Verwende eine temporäre Datei
+                tmp_file="${docker_compose_file}.tmp"
+                
+                # Ersetze 80:80 mit 8080:80 im Nextcloud-Service-Block
+                awk -v found=0 '
+                    /nextcloud:/ {found=1}
+                    found && /80:80/ {gsub("80:80", "8080:80"); found=0}
+                    {print}
+                ' "$docker_compose_file" > "$tmp_file"
+                
+                # Ersetze 443:443 mit 8443:443 im Nextcloud-Service-Block
+                awk -v found=0 '
+                    /nextcloud:/ {found=1}
+                    found && /443:443/ {gsub("443:443", "8443:443"); found=0}
+                    {print}
+                ' "$tmp_file" > "$docker_compose_file"
+                
+                rm "$tmp_file"
+                
+                success_message "Port-Konfigurationen wurden aktualisiert. Nextcloud läuft jetzt auf Ports 8080/8443."
+            else
+                warning_message "Nextcloud-Service-Block konnte nicht gefunden werden. Manuelle Änderung erforderlich."
+            fi
+        else
+            warning_message "Keine Änderungen an den Port-Konfigurationen vorgenommen."
+        fi
+    else
+        success_message "Keine Portkonflikte zwischen Nextcloud und Nginx gefunden."
+    fi
+    
     return 0
 }
 
@@ -134,9 +185,22 @@ function check_docker_compose() {
 function create_missing_directories() {
     status_message "Erstelle fehlende Verzeichnisstrukturen..."
     
-    mkdir -p swissairdry/api/app
+    # Hauptverzeichnisse
+    mkdir -p swissairdry/api/app/routes
+    mkdir -p swissairdry/api/app/models
+    mkdir -p swissairdry/api/app/schemas
+    mkdir -p swissairdry/api/app/templates
+    mkdir -p swissairdry/api/app/static
+    
+    # MQTT Verzeichnis
     mkdir -p swissairdry/mqtt
+    
+    # ExApp Verzeichnisse
     mkdir -p swissairdry/exapp/daemon
+    mkdir -p swissairdry/exapp/frontend/src
+    
+    # Nginx Verzeichnisse
+    mkdir -p nginx/conf.d
     
     success_message "Verzeichnisstruktur erstellt."
     

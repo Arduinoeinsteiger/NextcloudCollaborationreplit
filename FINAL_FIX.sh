@@ -615,6 +615,22 @@ services:
     depends_on:
       - api
       - simple-api
+      
+  # Portainer - Container-Management
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: swissairdry-portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer-data:/data
+    ports:
+      - "9000:9000"  # Portainer Port
+    networks:
+      - swissairdry-network
 
 networks:
   swissairdry-network:
@@ -624,6 +640,7 @@ volumes:
   db-data:
   mosquitto-data:
   mosquitto-log:
+  portainer-data:
 EOF
         success_message "Neue Docker-Compose-Datei erstellt."
     fi
@@ -963,6 +980,7 @@ echo "  - Simple API: http://localhost:5001"
 echo "  - MQTT Broker: localhost:1883"
 echo "  - MQTT WebSocket: ws://localhost:9001"
 echo "  - Nginx Reverse Proxy: http://localhost:80"
+echo "  - Portainer: http://localhost:9000"
 
 # Zeige Zugriff auf die Container
 echo ""
@@ -970,7 +988,16 @@ info "Container-Zugriff:"
 echo "  - API Logs: docker-compose -f docker-compose-all-in-one.yml logs api"
 echo "  - Simple API Logs: docker-compose -f docker-compose-all-in-one.yml logs simple-api"
 echo "  - MQTT Logs: docker-compose -f docker-compose-all-in-one.yml logs mqtt"
+echo "  - Portainer Logs: docker-compose -f docker-compose-all-in-one.yml logs portainer"
 echo "  - Alle Services stoppen: docker-compose -f docker-compose-all-in-one.yml down"
+
+# Hinweis für Portainer-Konfiguration
+echo ""
+info "Erstmalige Portainer-Konfiguration:"
+echo "  1. Öffnen Sie http://localhost:9000 im Browser"
+echo "  2. Erstellen Sie einen Admin-Benutzer (min. 8 Zeichen Passwort)"
+echo "  3. Wählen Sie 'Local' als Umgebung"
+echo "  4. Sie können nun alle Container über die Portainer-Oberfläche verwalten"
 
 echo ""
 success "SwissAirDry-System wurde gestartet."
@@ -1013,6 +1040,11 @@ function create_project_overview() {
    - **Beschreibung**: Nginx als Reverse Proxy für alle Services
    - **Ports**: 80 (HTTP), 443 (HTTPS)
    - **Konfiguration**: `nginx/conf.d/default.conf`
+
+6. **Portainer**
+   - **Beschreibung**: Container-Management-Oberfläche
+   - **Port**: 9000
+   - **Zugriff**: http://localhost:9000
 
 ## Verzeichnisstruktur
 

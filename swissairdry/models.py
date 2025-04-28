@@ -12,11 +12,18 @@ Dies vereinfacht Importe und Tests.
 from swissairdry.api.app.models import (
     Device, 
     SensorData, 
-    Customer, 
-    Job, 
-    Report, 
-    EnergyCost
+    DeviceConfiguration,
+    DeviceCommand,
+    DeviceType,
+    DeviceStatus,
+    CommunicationType
 )
+
+# Diese Modelle fehlen noch und müssen implementiert werden
+# Customer, 
+# Job, 
+# Report, 
+# EnergyCost
 
 # Konstanten und Enum-Klassen für die Modelle
 JOB_STATUS_NEW = "new"

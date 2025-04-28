@@ -1,0 +1,1 @@
+# SwissAirDry API Schema Modul

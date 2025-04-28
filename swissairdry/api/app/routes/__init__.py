@@ -1,7 +1,1 @@
-"""
-SwissAirDry API Routes
-
-Dieses Modul enthält die Routing-Definitionen für die SwissAirDry API.
-"""
-
-__all__ = []
+# SwissAirDry API Routes Modul

@@ -1,3 +1,8 @@
+# CI-Fix: Diese Datei wurde durch fix_ci_issues_complete.py repariert.
+"""
+Setup Modul
+"""
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 

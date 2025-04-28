@@ -1,202 +1,214 @@
 # SwissAirDry Fehlerbehebung
 
-Diese Anleitung hilft Ihnen bei der Behebung häufiger Probleme, die bei der Installation oder dem Betrieb des SwissAirDry-Systems auftreten können.
+Diese Anleitung hilft bei der Behebung häufiger Probleme mit dem SwissAirDry-System.
 
-## Verbindungsprobleme
+## Inhaltsverzeichnis
 
-### API-Server nicht erreichbar
+1. [Diagnose-Tools](#diagnose-tools)
+2. [Häufige Probleme](#häufige-probleme)
+   - [Docker-Container starten nicht](#docker-container-starten-nicht)
+   - [API ist nicht erreichbar](#api-ist-nicht-erreichbar)
+   - [MQTT-Verbindung fehlgeschlagen](#mqtt-verbindung-fehlgeschlagen)
+   - [Dateisystem-Inkonsistenzen](#dateisystem-inkonsistenzen)
+3. [Reparatur-Anleitung](#reparatur-anleitung)
+4. [Manuelle Behebungsschritte](#manuelle-behebungsschritte)
+5. [Kontakt und Support](#kontakt-und-support)
 
-**Symptom:** Die API ist unter http://ihre-domain:5000/ nicht erreichbar.
+## Diagnose-Tools
+
+Im SwissAirDry-Paket sind zwei Diagnose-Tools enthalten:
+
+1. **diagnose_system.sh**: Dieses Skript führt eine umfassende Systemdiagnose durch und identifiziert potenzielle Probleme.
+
+   ```bash
+   ./diagnose_system.sh
+   ```
+
+2. **system_repair.sh**: Dieses Skript behebt bekannte Probleme automatisch und stellt das System wieder her.
+
+   ```bash
+   ./system_repair.sh
+   ```
+
+## Häufige Probleme
+
+### Docker-Container starten nicht
+
+**Symptome:**
+- Docker-Compose zeigt Fehler an
+- Container werden gestartet, beenden sich aber sofort
+- Keine laufenden Container sichtbar mit `docker ps`
 
 **Lösungen:**
-
-1. Prüfen Sie, ob der Port 5000 in Ihrer Firewall freigegeben ist:
+1. Überprüfen Sie den Docker-Daemon-Status:
    ```bash
-   sudo iptables -L -n | grep 5000
+   sudo systemctl status docker
    ```
 
-2. Prüfen Sie, ob der API-Container läuft:
+2. Überprüfen Sie die Container-Logs:
    ```bash
-   docker-compose ps
+   docker logs swissairdry-api
+   docker logs swissairdry-mqtt
    ```
 
-3. Überprüfen Sie die Logs des API-Containers:
+3. Starten Sie die Docker-Services neu:
    ```bash
-   docker-compose logs api
+   sudo systemctl restart docker
+   ./system_repair.sh
    ```
 
-4. Starten Sie den API-Container neu:
+### API ist nicht erreichbar
+
+**Symptome:**
+- API-Endpunkte antworten nicht (Port 5000/5001)
+- Browser zeigt "Verbindung abgelehnt" oder Timeout-Fehler
+
+**Lösungen:**
+1. Überprüfen Sie, ob die Container laufen:
+   ```bash
+   docker ps | grep api
+   ```
+
+2. Überprüfen Sie die Container-Logs:
+   ```bash
+   docker logs swissairdry-api
+   ```
+
+3. Überprüfen Sie die Port-Bindungen:
+   ```bash
+   ss -tuln | grep 5000
+   ```
+
+4. Neu starten des API-Containers:
    ```bash
    docker-compose restart api
    ```
 
-### MQTT-Broker nicht erreichbar
+### MQTT-Verbindung fehlgeschlagen
 
-**Symptom:** Geräte können keine Verbindung zum MQTT-Broker herstellen.
+**Symptome:**
+- IoT-Geräte können keine Verbindung zum MQTT-Broker herstellen
+- Fehler "Connection refused" oder Timeouts
+- MQTT-Client kann nicht auf Port 1883 verbinden
 
 **Lösungen:**
-
-1. Prüfen Sie, ob Port 1883 freigegeben ist:
+1. Überprüfen Sie, ob der MQTT-Broker läuft:
    ```bash
-   sudo iptables -L -n | grep 1883
+   docker ps | grep mqtt
    ```
 
 2. Überprüfen Sie die MQTT-Broker-Logs:
    ```bash
-   docker-compose logs mqtt
+   docker logs swissairdry-mqtt
    ```
 
-3. Prüfen Sie, ob die Passwortdatei korrekt erstellt wurde:
+3. Überprüfen Sie die mosquitto.conf:
    ```bash
-   ls -la swissairdry-docker/mosquitto/config/mosquitto.passwd
+   cat swissairdry/mqtt/mosquitto.conf
    ```
 
-4. Testen Sie die MQTT-Verbindung mit einem Client:
+4. Neu starten des MQTT-Containers:
    ```bash
-   docker exec -it swissairdry-mqtt mosquitto_sub -h localhost -p 1883 -u swissairdry -P IhrPasswort -t test
+   docker-compose restart mqtt
    ```
 
-## Datenbank-Probleme
+### Dateisystem-Inkonsistenzen
 
-### Verbindung zur Datenbank fehlgeschlagen
-
-**Symptom:** Die API kann keine Verbindung zur Datenbank herstellen.
+**Symptome:**
+- Einige Dateien werden als gelöscht markiert, sind aber noch vorhanden
+- Fehler beim Ausführen von Git-Befehlen
+- Inkonsistente Versionskontrolle
 
 **Lösungen:**
-
-1. Prüfen Sie, ob der Datenbank-Container läuft:
+1. Bereinigen Sie den Git-Status:
    ```bash
-   docker-compose ps db
+   git status
+   git clean -fd   # Vorsicht: Entfernt nicht-getrackte Dateien
    ```
 
-2. Prüfen Sie die Datenbank-Logs:
+2. Reset auf den letzten bekannten guten Zustand:
    ```bash
-   docker-compose logs db
+   git reset --hard origin/main
    ```
 
-3. Prüfen Sie die Verbindungsparameter in der .env-Datei:
+3. Führen Sie das Reparatur-Skript aus:
    ```bash
-   grep POSTGRES .env
+   ./system_repair.sh
    ```
 
-4. Stellen Sie eine direkte Verbindung zur Datenbank her, um zu prüfen, ob sie funktioniert:
+## Reparatur-Anleitung
+
+Falls das System nicht normal funktioniert, befolgen Sie diese Schritte:
+
+1. **Diagnose durchführen**:
    ```bash
-   docker-compose exec db psql -U swissairdry -d swissairdry -c "SELECT 1;"
+   ./diagnose_system.sh
+   ```
+   Überprüfen Sie die Ausgabe auf Fehler und Warnungen.
+
+2. **System reparieren**:
+   ```bash
+   ./system_repair.sh
+   ```
+   Dieses Skript wird:
+   - Bestehende Container stoppen und entfernen
+   - Wichtige Verzeichnisse erstellen
+   - Konfigurationsdateien wiederherstellen
+   - Container neu starten
+
+3. **Container-Status überprüfen**:
+   ```bash
+   docker ps
+   ```
+   Alle SwissAirDry-Container sollten im Status "Up" sein.
+
+4. **Logs überprüfen**:
+   ```bash
+   docker-compose logs
+   ```
+   Suchen Sie nach Fehlermeldungen oder ungewöhnlichen Warnungen.
+
+## Manuelle Behebungsschritte
+
+Falls die automatischen Skripte das Problem nicht beheben, können diese manuellen Schritte helfen:
+
+1. **Komplette Neuinstallation**:
+   ```bash
+   # Docker-Container und Volumes entfernen
+   docker-compose down -v
+   
+   # Git-Repo zurücksetzen
+   git reset --hard origin/main
+   git clean -fd
+   
+   # System neu installieren
+   ./system_repair.sh
    ```
 
-### Datenbankmigration fehlgeschlagen
-
-**Symptom:** Fehler bei der automatischen Migration der Datenbank.
-
-**Lösungen:**
-
-1. Prüfen Sie die API-Logs auf spezifische Migrationsfehler:
+2. **Docker-System bereinigen**:
    ```bash
-   docker-compose logs api | grep -i migrat
+   # Ungenutzte Container, Netzwerke und Images entfernen
+   docker system prune -a
+   
+   # Volumes bereinigen (Vorsicht: Daten gehen verloren!)
+   docker volume prune
    ```
 
-2. Starten Sie die Container neu, um die Migration erneut zu versuchen:
+3. **Dateisystem überprüfen**:
    ```bash
-   docker-compose down
-   docker-compose up -d
+   # Wichtige Verzeichnisse erstellen
+   mkdir -p swissairdry/api/app
+   mkdir -p swissairdry/mqtt
+   mkdir -p nginx/conf.d
+   
+   # Berechtigungen korrigieren
+   chmod -R 755 .
    ```
 
-## Failover-System-Probleme
+## Kontakt und Support
 
-### Automatischer Wechsel funktioniert nicht
-
-**Symptom:** Das System wechselt nicht automatisch zum Backup-Server, wenn der primäre Server ausfällt.
-
-**Lösungen:**
-
-1. Prüfen Sie die aktuellen Server-Einstellungen:
-   ```bash
-   curl -u benutzer:passwort http://ihre-domain:5000/api/v1/api-status
-   ```
-
-2. Prüfen Sie die API-Logs auf Failover-Meldungen:
-   ```bash
-   docker-compose logs api | grep -i server
-   ```
-
-3. Führen Sie einen manuellen Wechsel durch:
-   ```bash
-   curl -X POST -u benutzer:passwort http://ihre-domain:5000/api/v1/api-status/switch-to-backup
-   ```
-
-4. Überprüfen Sie die Umgebungsvariablen in der .env-Datei:
-   ```bash
-   grep API_ .env
-   ```
-
-## Nextcloud-Probleme
-
-### Nextcloud-App wird nicht angezeigt
-
-**Symptom:** Die SwissAirDry-App erscheint nicht in Nextcloud.
-
-**Lösungen:**
-
-1. Prüfen Sie, ob Nextcloud richtig läuft:
-   ```bash
-   docker-compose ps nextcloud
-   ```
-
-2. Überprüfen Sie, ob das App-Verzeichnis korrekt eingebunden wurde:
-   ```bash
-   docker exec -it swissairdry-nextcloud ls -la /var/www/html/custom_apps
-   ```
-
-3. Aktivieren Sie die App manuell in Nextcloud:
-   ```bash
-   docker exec -it swissairdry-nextcloud php occ app:enable swissairdry
-   ```
-
-4. Prüfen Sie die Nextcloud-Logs:
-   ```bash
-   docker-compose logs nextcloud
-   ```
-
-## Container-Management
-
-### Container neu starten
-
-Um alle Container neu zu starten:
-
-```bash
-docker-compose down
-docker-compose up -d
-```
-
-Um einen spezifischen Container neu zu starten:
-
-```bash
-docker-compose restart [container-name]
-```
-
-### Container-Logs anzeigen
-
-Um die Logs eines Containers anzuzeigen:
-
-```bash
-docker-compose logs [container-name]
-```
-
-Um die letzten 100 Zeilen der Logs anzuzeigen und fortzufahren:
-
-```bash
-docker-compose logs -f --tail=100 [container-name]
-```
-
-## Support
-
-Wenn Sie ein Problem nicht selbst lösen können, wenden Sie sich bitte an den Support:
+Bei anhaltenden Problemen wenden Sie sich bitte an das SwissAirDry-Support-Team:
 
 - E-Mail: support@swissairdry.com
-- Telefon: +41 XXXX XXXX XX
-
-Bitte halten Sie folgende Informationen bereit:
-- Die Version des SwissAirDry-Systems
-- Relevante Logfiles
-- Eine genaue Beschreibung des Problems
-- Schritte zur Reproduktion des Fehlers, falls möglich
+- Support-Website: https://support.swissairdry.com
+- GitHub Issues: https://github.com/swissairdry/swissairdry/issues

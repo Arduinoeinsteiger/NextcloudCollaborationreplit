@@ -10,86 +10,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "SwissAirDry API"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "SwissAirDry Simple API"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Ports"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "MQTT Broker"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Backup Simple API"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Flask Simple API"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Minimal API"
-
-[[workflows.workflow]]
-name = "SwissAirDry API"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd swissairdry/api/app && python run2.py"
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "SwissAirDry Simple API"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd swissairdry/api && python start_simple.py"
-waitForPort = 5001
-
-[[workflows.workflow]]
-name = "Ports"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cat /etc/services | grep 5000"
-
-[[workflows.workflow]]
-name = "MQTT Broker"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "mkdir -p /tmp/mosquitto/data /tmp/mosquitto/log && chmod -R 777 /tmp/mosquitto && mosquitto -c swissairdry/mqtt/mosquitto.conf"
 
 [[workflows.workflow]]
 name = "Run Tests"
@@ -101,30 +22,12 @@ task = "shell.exec"
 args = "python -m pytest"
 
 [[workflows.workflow]]
-name = "Backup Simple API"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd swissairdry/api && python start_simple_backup.py"
-waitForPort = 5001
-
-[[workflows.workflow]]
-name = "Flask Simple API"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd swissairdry/api && python flask_simple.py"
-waitForPort = 5001
-
-[[workflows.workflow]]
 name = "Minimal API"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd swissairdry/api && python minimal_http_server.py"
+args = "cd /home/runner/workspace/swissairdry/api && python minimal_http_server.py"
 waitForPort = 5001
 
 [deployment]

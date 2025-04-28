@@ -54,7 +54,7 @@ class Device(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     ip_address = Column(String(50))
-    metadata = Column(JSON, default={})
+    device_metadata = Column(JSON, default={})  # Umbenannt von 'metadata' zu 'device_metadata', um Konflikte mit SQLAlchemy zu vermeiden
     is_active = Column(Boolean, default=True)
     
     # Beziehungen

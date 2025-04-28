@@ -1,256 +1,214 @@
-# SwissAirDry Fehlerbehebungsanleitung
+# SwissAirDry Fehlerbehebung
 
 Diese Anleitung hilft bei der Behebung häufiger Probleme mit dem SwissAirDry-System.
 
-## Sicherheitspatches
+## Inhaltsverzeichnis
 
-### Bekannte Sicherheitslücken (April 2025)
+1. [Diagnose-Tools](#diagnose-tools)
+2. [Häufige Probleme](#häufige-probleme)
+   - [Docker-Container starten nicht](#docker-container-starten-nicht)
+   - [API ist nicht erreichbar](#api-ist-nicht-erreichbar)
+   - [MQTT-Verbindung fehlgeschlagen](#mqtt-verbindung-fehlgeschlagen)
+   - [Dateisystem-Inkonsistenzen](#dateisystem-inkonsistenzen)
+3. [Reparatur-Anleitung](#reparatur-anleitung)
+4. [Manuelle Behebungsschritte](#manuelle-behebungsschritte)
+5. [Kontakt und Support](#kontakt-und-support)
 
-**Problem:** Mehrere Sicherheitslücken wurden in Abhängigkeiten gefunden, darunter:
-- **python-jose**: Algorithmus-Verwechslung mit OpenSSH ECDSA-Schlüsseln (Kritisch)
-- **Pillow**: Möglichkeit zur beliebigen Codeausführung (Kritisch)
-- **Gunicorn**: HTTP Request/Response Smuggling (Hoch)
-- **Flask-CORS**: Sicherheitsprobleme mit CORS-Headern (Hoch)
-- **python-multipart**: Denial of Service (DoS) durch fehlerhafte Multipart-Grenzen (Hoch)
-- **Jinja2**: Sandbox-Breakout-Schwachstellen (Mittel)
+## Diagnose-Tools
 
-**Lösung:**
+Im SwissAirDry-Paket sind zwei Diagnose-Tools enthalten:
 
-1. **Automatisches Update mit security_update.sh**
+1. **diagnose_system.sh**: Dieses Skript führt eine umfassende Systemdiagnose durch und identifiziert potenzielle Probleme.
+
    ```bash
-   ./security_update.sh
+   ./diagnose_system.sh
    ```
-   Dieses Skript aktualisiert alle requirements-Dateien auf sichere Versionen.
 
-2. **Bilder neu bauen**
+2. **system_repair.sh**: Dieses Skript behebt bekannte Probleme automatisch und stellt das System wieder her.
+
    ```bash
-   ./build_and_publish_images.sh
+   ./system_repair.sh
    ```
-   Dadurch werden die Docker-Images mit den aktualisierten Abhängigkeiten neu gebaut und veröffentlicht.
 
-3. **Neustart mit aktualisierten Images**
+## Häufige Probleme
+
+### Docker-Container starten nicht
+
+**Symptome:**
+- Docker-Compose zeigt Fehler an
+- Container werden gestartet, beenden sich aber sofort
+- Keine laufenden Container sichtbar mit `docker ps`
+
+**Lösungen:**
+1. Überprüfen Sie den Docker-Daemon-Status:
    ```bash
-   ./stop_docker.sh
-   ./start_docker.sh
+   sudo systemctl status docker
    ```
-   Beim Start des Stacks können Sie wählen, ob Sie die aktuellen Registry-Images oder lokale Builds verwenden möchten.
 
-## API-Probleme
+2. Überprüfen Sie die Container-Logs:
+   ```bash
+   docker logs swissairdry-api
+   docker logs swissairdry-mqtt
+   ```
 
-### API startet nicht
+3. Starten Sie die Docker-Services neu:
+   ```bash
+   sudo systemctl restart docker
+   ./system_repair.sh
+   ```
 
-**Symptom:** Die API startet nicht oder ist nicht erreichbar.
+### API ist nicht erreichbar
 
-**Mögliche Ursachen und Lösungen:**
-
-1. **Port ist bereits belegt**
-   - Prüfen Sie, ob der konfigurierte Port (Standard: 5000) bereits verwendet wird:
-     ```bash
-     sudo lsof -i :5000
-     ```
-   - Beenden Sie den blockierenden Prozess oder ändern Sie den API-Port in der `.env`-Datei.
-
-2. **Python-Abhängigkeiten fehlen**
-   - Installieren Sie die erforderlichen Pakete manuell:
-     ```bash
-     pip install fastapi uvicorn sqlalchemy pydantic psycopg2-binary python-dotenv paho-mqtt
-     ```
-
-3. **Berechtigungsprobleme**
-   - Stellen Sie sicher, dass Sie die erforderlichen Berechtigungen haben:
-     ```bash
-     chmod +x ~/swissairdry/start_api.sh
-     chmod -R 755 ~/swissairdry/api
-     ```
-
-4. **Fehlerhafte Konfiguration**
-   - Überprüfen Sie die Konfiguration in der `.env`-Datei.
-
-### API-Fehler
-
-**Symptom:** Die API gibt Fehler zurück oder funktioniert nicht wie erwartet.
+**Symptome:**
+- API-Endpunkte antworten nicht (Port 5000/5001)
+- Browser zeigt "Verbindung abgelehnt" oder Timeout-Fehler
 
 **Lösungen:**
+1. Überprüfen Sie, ob die Container laufen:
+   ```bash
+   docker ps | grep api
+   ```
 
-1. **Logdateien prüfen**
-   - Sehen Sie sich die API-Logs an:
-     ```bash
-     tail -f ~/swissairdry/logs/api.log
-     ```
+2. Überprüfen Sie die Container-Logs:
+   ```bash
+   docker logs swissairdry-api
+   ```
 
-2. **Neustart der API**
-   - Stoppen und starten Sie die API:
-     ```bash
-     ~/swissairdry/stop_api.sh
-     ~/swissairdry/start_api.sh
-     ```
+3. Überprüfen Sie die Port-Bindungen:
+   ```bash
+   ss -tuln | grep 5000
+   ```
 
-## MQTT-Probleme
+4. Neu starten des API-Containers:
+   ```bash
+   docker-compose restart api
+   ```
 
-### MQTT-Broker startet nicht
+### MQTT-Verbindung fehlgeschlagen
 
-**Symptom:** Der MQTT-Broker startet nicht oder ist nicht erreichbar.
-
-**Mögliche Ursachen und Lösungen:**
-
-1. **Mosquitto ist nicht installiert**
-   - Installieren Sie Mosquitto manuell:
-     ```bash
-     sudo apt-get update && sudo apt-get install -y mosquitto mosquitto-clients
-     ```
-
-2. **Port ist bereits belegt**
-   - Prüfen Sie, ob der konfigurierte Port (Standard: 1883) bereits verwendet wird:
-     ```bash
-     sudo lsof -i :1883
-     ```
-   - Beenden Sie den blockierenden Prozess oder ändern Sie den MQTT-Port in der `.env`-Datei.
-
-3. **Berechtigungsprobleme**
-   - Stellen Sie sicher, dass Sie die erforderlichen Berechtigungen haben:
-     ```bash
-     chmod +x ~/swissairdry/start_mqtt.sh
-     chmod -R 755 ~/swissairdry/mqtt
-     ```
-
-4. **Fehlerhafte Konfiguration**
-   - Überprüfen Sie die Konfiguration in `~/swissairdry/mqtt/config/mosquitto.conf`.
-
-### MQTT-Verbindungsprobleme
-
-**Symptom:** Clients können keine Verbindung zum MQTT-Broker herstellen.
+**Symptome:**
+- IoT-Geräte können keine Verbindung zum MQTT-Broker herstellen
+- Fehler "Connection refused" oder Timeouts
+- MQTT-Client kann nicht auf Port 1883 verbinden
 
 **Lösungen:**
+1. Überprüfen Sie, ob der MQTT-Broker läuft:
+   ```bash
+   docker ps | grep mqtt
+   ```
 
-1. **Logdateien prüfen**
-   - Sehen Sie sich die MQTT-Logs an:
-     ```bash
-     tail -f ~/swissairdry/mqtt/log/mosquitto.log
-     ```
+2. Überprüfen Sie die MQTT-Broker-Logs:
+   ```bash
+   docker logs swissairdry-mqtt
+   ```
 
-2. **Prüfen Sie die Authentifizierung**
-   - Wenn Sie die Authentifizierung aktiviert haben (`MQTT_AUTH_ENABLED=true`), stellen Sie sicher, dass Benutzername und Passwort korrekt sind.
-   - Wenn Sie anonyme Verbindungen zulassen möchten, setzen Sie `MQTT_ALLOW_ANONYMOUS=true`.
+3. Überprüfen Sie die mosquitto.conf:
+   ```bash
+   cat swissairdry/mqtt/mosquitto.conf
+   ```
 
-3. **Neustart des MQTT-Brokers**
-   - Stoppen und starten Sie den MQTT-Broker:
-     ```bash
-     ~/swissairdry/stop_mqtt.sh
-     ~/swissairdry/start_mqtt.sh
-     ```
+4. Neu starten des MQTT-Containers:
+   ```bash
+   docker-compose restart mqtt
+   ```
 
-4. **Überprüfen Sie die Netzwerkverbindung**
-   - Testen Sie die Verbindung zum MQTT-Broker:
-     ```bash
-     mosquitto_pub -h localhost -p 1883 -t test -m "Hallo Welt"
-     ```
+### Dateisystem-Inkonsistenzen
 
-## ESP-Firmware-Probleme
-
-### Kompilierungsfehler
-
-**Symptom:** Die Firmware kann nicht kompiliert werden.
-
-**Mögliche Ursachen und Lösungen:**
-
-1. **PlatformIO ist nicht installiert**
-   - Installieren Sie PlatformIO manuell:
-     ```bash
-     pip install -U platformio
-     ```
-
-2. **Abhängigkeiten fehlen**
-   - Führen Sie eine Aktualisierung der PlatformIO-Abhängigkeiten durch:
-     ```bash
-     cd ~/swissairdry/firmware
-     platformio pkg update
-     ```
-
-3. **Fehlerhafter Code**
-   - Überprüfen Sie die Fehlermeldungen und korrigieren Sie den Code entsprechend.
-
-4. **SPI-Typ-Definitionen (ESP32-C6)**
-   - Bei Problemen mit `spi_host_device_t` in ESP32-C6, stellen Sie sicher, dass die `spi_fix.h` korrekt eingebunden ist.
-
-### Upload-Probleme
-
-**Symptom:** Die Firmware kann nicht auf das Gerät hochgeladen werden.
+**Symptome:**
+- Einige Dateien werden als gelöscht markiert, sind aber noch vorhanden
+- Fehler beim Ausführen von Git-Befehlen
+- Inkonsistente Versionskontrolle
 
 **Lösungen:**
+1. Bereinigen Sie den Git-Status:
+   ```bash
+   git status
+   git clean -fd   # Vorsicht: Entfernt nicht-getrackte Dateien
+   ```
 
-1. **Überprüfen Sie die Verbindung**
-   - Stellen Sie sicher, dass das Gerät korrekt angeschlossen ist und der richtige Port angegeben wurde.
-   - Versuchen Sie, den Port manuell anzugeben:
-     ```bash
-     ~/swissairdry/firmware/upload_esp8266.sh /dev/ttyUSB0
-     ```
+2. Reset auf den letzten bekannten guten Zustand:
+   ```bash
+   git reset --hard origin/main
+   ```
 
-2. **Setzen Sie das Gerät in den Flash-Modus**
-   - Drücken Sie die BOOT- oder FLASH-Taste während des Uploads.
+3. Führen Sie das Reparatur-Skript aus:
+   ```bash
+   ./system_repair.sh
+   ```
 
-3. **Berechtigungsprobleme**
-   - Stellen Sie sicher, dass Sie Zugriff auf den seriellen Port haben:
-     ```bash
-     sudo chmod 666 /dev/ttyUSB0
-     ```
-   - Fügen Sie Ihren Benutzer zur Gruppe `dialout` hinzu:
-     ```bash
-     sudo usermod -a -G dialout $USER
-     ```
-     (Anmeldung erforderlich, damit die Änderung wirksam wird)
+## Reparatur-Anleitung
 
-## Allgemeine Probleme
+Falls das System nicht normal funktioniert, befolgen Sie diese Schritte:
 
-### Dienste starten nach Neustart nicht automatisch
+1. **Diagnose durchführen**:
+   ```bash
+   ./diagnose_system.sh
+   ```
+   Überprüfen Sie die Ausgabe auf Fehler und Warnungen.
 
-**Problem:** Die Dienste starten nach einem Systemneustart nicht automatisch.
+2. **System reparieren**:
+   ```bash
+   ./system_repair.sh
+   ```
+   Dieses Skript wird:
+   - Bestehende Container stoppen und entfernen
+   - Wichtige Verzeichnisse erstellen
+   - Konfigurationsdateien wiederherstellen
+   - Container neu starten
 
-**Lösung:**
+3. **Container-Status überprüfen**:
+   ```bash
+   docker ps
+   ```
+   Alle SwissAirDry-Container sollten im Status "Up" sein.
 
-Erstellen Sie systemd-Service-Dateien oder crontab-Einträge, um die Dienste automatisch zu starten:
+4. **Logs überprüfen**:
+   ```bash
+   docker-compose logs
+   ```
+   Suchen Sie nach Fehlermeldungen oder ungewöhnlichen Warnungen.
 
-**Beispiel für crontab:**
+## Manuelle Behebungsschritte
 
-```bash
-crontab -e
-```
+Falls die automatischen Skripte das Problem nicht beheben, können diese manuellen Schritte helfen:
 
-Fügen Sie die folgenden Zeilen hinzu:
+1. **Komplette Neuinstallation**:
+   ```bash
+   # Docker-Container und Volumes entfernen
+   docker-compose down -v
+   
+   # Git-Repo zurücksetzen
+   git reset --hard origin/main
+   git clean -fd
+   
+   # System neu installieren
+   ./system_repair.sh
+   ```
 
-```
-@reboot ~/swissairdry/start_api.sh
-@reboot ~/swissairdry/start_mqtt.sh
-```
+2. **Docker-System bereinigen**:
+   ```bash
+   # Ungenutzte Container, Netzwerke und Images entfernen
+   docker system prune -a
+   
+   # Volumes bereinigen (Vorsicht: Daten gehen verloren!)
+   docker volume prune
+   ```
 
-### Datenbank-Probleme
-
-**Symptom:** Datenbankfehler in den API-Logs.
-
-**Lösungen:**
-
-1. **Überprüfen Sie die Datenbankverbindung**
-   - Stellen Sie sicher, dass die Datenbank läuft und erreichbar ist.
-   - Überprüfen Sie die Datenbankverbindungsdaten in der `.env`-Datei.
-
-2. **Datenbankschema aktualisieren**
-   - Führen Sie die Datenbankmigrationen manuell aus.
-
-### Speicherprobleme
-
-**Symptom:** Die ESP-Geräte stürzen ab oder starten neu.
-
-**Lösungen:**
-
-1. **Stacktrace überprüfen**
-   - Verwenden Sie den seriellen Monitor, um die Fehlermeldungen zu sehen:
-     ```bash
-     ~/swissairdry/firmware/monitor.sh
-     ```
-
-2. **Speichernutzung optimieren**
-   - Reduzieren Sie große statische Datenstrukturen oder Puffer.
-   - Verwenden Sie dynamische Speicherverwaltung mit Bedacht.
+3. **Dateisystem überprüfen**:
+   ```bash
+   # Wichtige Verzeichnisse erstellen
+   mkdir -p swissairdry/api/app
+   mkdir -p swissairdry/mqtt
+   mkdir -p nginx/conf.d
+   
+   # Berechtigungen korrigieren
+   chmod -R 755 .
+   ```
 
 ## Kontakt und Support
 
-Bei anhaltenden Problemen oder speziellen Fragen wenden Sie sich bitte an das SwissAirDry-Team.
+Bei anhaltenden Problemen wenden Sie sich bitte an das SwissAirDry-Support-Team:
+
+- E-Mail: support@swissairdry.com
+- Support-Website: https://support.swissairdry.com
+- GitHub Issues: https://github.com/swissairdry/swissairdry/issues

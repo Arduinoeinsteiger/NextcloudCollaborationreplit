@@ -1,0 +1,118 @@
+digraph G {
+    // Graphstil
+    graph [fontname = "Arial", fontsize = 14, rankdir = "TB", nodesep=0.8, ranksep=1.0];
+    node [fontname = "Arial", fontsize = 12, shape = "box", style = "rounded,filled", fillcolor = "lightblue"];
+    edge [fontname = "Arial", fontsize = 10];
+    
+    // Externe Akteure
+    subgraph cluster_extern {
+        label = "Externe Akteure";
+        style = "rounded,filled";
+        color = "lightgrey";
+        
+        internet [label="Internet", shape="cloud", fillcolor="white"];
+        client [label="Webbrowser\nClient", fillcolor="white"];
+        mobileapp [label="Mobile App\n(Android)", fillcolor="white"];
+    }
+    
+    // Netzwerkgeräte
+    router [label="Router\n(Port-Forwarding)", shape="box3d", fillcolor="lightcyan"];
+    
+    // Server & Container
+    subgraph cluster_server {
+        label = "Server (hpmicroserver)";
+        style = "rounded,filled";
+        color = "lightgrey";
+        
+        // Docker Container Stack
+        subgraph cluster_docker {
+            label = "Docker-Netzwerk (swissairdry-network)";
+            style = "rounded,filled";
+            color = "lightgreen";
+            fillcolor = "white";
+            
+            nginx [label="Nginx\nReverse Proxy\n(Port 80/443)", fillcolor="palegreen"];
+            
+            subgraph cluster_services {
+                label = "SwissAirDry Dienste";
+                style = "rounded,dashed";
+                color = "grey";
+                
+                api [label="SwissAirDry API\n(Port 5000)", fillcolor="lightblue"];
+                simpleapi [label="SwissAirDry\nSimple API", fillcolor="lightblue"];
+                mqtt [label="MQTT Broker\n(Port 1883/9001)", fillcolor="orange"];
+                exapp [label="ExApp Server\n(Port 3000)", fillcolor="#FFF0B0"];
+                exapp_daemon [label="ExApp Daemon", fillcolor="#FFF0B0"];
+            }
+            
+            postgres [label="PostgreSQL\n(Port 5432)", fillcolor="#E0B0FF"];
+            portainer [label="Portainer\n(Port 9000)", fillcolor="#FFB0B0"];
+        }
+    }
+    
+    // IoT Geräte
+    subgraph cluster_iot {
+        label = "IoT Geräte";
+        style = "rounded,filled";
+        color = "lightgrey";
+        
+        esp8266 [label="ESP8266\nMikrocontroller", fillcolor="#FFDDAA"];
+        esp32 [label="ESP32\nMikrocontroller", fillcolor="#FFDDAA"];
+        stm32 [label="STM32\nMikrocontroller", fillcolor="#FFDDAA"];
+    }
+    
+    // Verbindungen - Internet und Router
+    internet -> router [label="Port-Weiterleitung"];
+    router -> nginx [label="80/443"];
+    router -> mqtt [label="1883"];
+    router -> api [label="5000"];
+    router -> postgres [label="5432"];
+    router -> exapp [label="3000"];
+    router -> portainer [label="9000"];
+    
+    // Clients zu Router
+    client -> router [label="HTTP/HTTPS"];
+    mobileapp -> router [label="HTTP/HTTPS"];
+    
+    // Docker interne Verbindungen
+    nginx -> api [label="Proxy /"];
+    nginx -> exapp [label="Proxy /exapp"];
+    nginx -> mqtt [label="Proxy /mqtt (WS)"];
+    nginx -> portainer [label="Proxy /portainer"];
+    
+    api -> postgres [label="SQL"];
+    simpleapi -> postgres [label="SQL"];
+    api -> mqtt [label="MQTT"];
+    simpleapi -> mqtt [label="MQTT"];
+    
+    exapp -> api [label="HTTP API"];
+    exapp_daemon -> api [label="HTTP API"];
+    exapp_daemon -> mqtt [label="MQTT"];
+    
+    // IoT Verbindungen
+    esp8266 -> mqtt [label="MQTT"];
+    esp32 -> mqtt [label="MQTT"];
+    stm32 -> mqtt [label="MQTT"];
+    
+    esp8266 -> simpleapi [label="HTTP"];
+    esp32 -> simpleapi [label="HTTP"];
+    stm32 -> simpleapi [label="HTTP"];
+    
+    // Domainnamen Beschriftung
+    subgraph cluster_domains {
+        label = "Domain-Namen";
+        style = "rounded,dashed";
+        color = "grey";
+        fillcolor = "white";
+        node [shape = "note", fillcolor = "white"];
+        
+        domain1 [label="vgnc.org\nwww.vgnc.org\n→ SwissAirDry API"];
+        domain2 [label="api.vgnc.org\n→ API"];
+        domain3 [label="talk.vgnc.org\n→ ExApp"];
+    }
+    
+    // Verbindungen zu Domains
+    domain1 -> nginx [style="dashed"];
+    domain2 -> nginx [style="dashed"];
+    domain3 -> nginx [style="dashed"];
+}

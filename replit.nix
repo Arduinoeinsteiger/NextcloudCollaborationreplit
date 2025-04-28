@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.graphviz
     pkgs.bluez
     pkgs.platformio-core
     pkgs.jq

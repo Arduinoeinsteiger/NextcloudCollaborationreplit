@@ -24,7 +24,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from swissairdry.api.app.schemas.base import BaseModel
 
 # Eigene MQTT-Client-Klasse importieren
 try:

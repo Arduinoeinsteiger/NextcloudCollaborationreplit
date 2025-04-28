@@ -93,7 +93,7 @@ def create_device(device: DeviceCreate, db: Session = Depends(get_db)):
         location=device.location,
         firmware_version=device.firmware_version,
         ip_address=device.ip_address,
-        metadata=device.metadata or {},
+        device_metadata=device.metadata or {},
         is_active=True
     )
     
@@ -326,7 +326,7 @@ def register_stm32_device(device: STM32DeviceRegister, db: Session = Depends(get
         location=device.location,
         firmware_version=device.firmware_version,
         ip_address=device.ip_address,
-        metadata=device.metadata or {},
+        device_metadata=device.metadata or {},
         is_active=True
     )
     

@@ -1,0 +1,59 @@
+# Fehlerbericht SwissAirDry Installation - V3.1
+
+## Systeminformationen
+- Datum: 28.04.2024
+- Zeit: 15:01
+- Betriebssystem: Linux 6.1.0-34-amd64
+- Arbeitsverzeichnis: /home/valentino/Dokumente/A/NextcloudCollaborationreplit-1
+
+## Fehler 1: Docker-Image-Zugriffsprobleme
+```
+! simple-api Warning: Head "https://ghcr.io/v2/arduinoeinsteiger/swissairdry-simple-api/manifests/latest": denied
+! exapp Warning: Head "https://ghcr.io/v2/arduinoeinsteiger/swissairdry-exapp/manifests/latest": denied
+! api Warning: Head "https://ghcr.io/v2/arduinoeinsteiger/swissairdry-api/manifests/latest": denied
+! exapp-daemon Warning: Head "https://ghcr.io/v2/arduinoeinsteiger/swissairdry-exapp-daemon/manifests/latest": denied
+```
+**Was zum Teufel?** Die Docker-Images sind nicht zugänglich! Wer hat die Berechtigungen so verkackt?
+
+## Fehler 2: Fehlende Dateien
+```
+ERROR [simple-api 6/7] COPY start_simple.py .:
+ERROR [api 6/7] COPY app/ app/:
+```
+**Unglaublich!** Die wichtigsten Dateien fehlen! Wo sind die verdammten Dateien hin? Das ist doch nicht zu fassen!
+
+## Fehler 3: Verzeichnisprobleme
+```
+failed to solve: failed to compute cache key: failed to calculate checksum of ref e19d93dc-6d92-400b-9165-bd1b0f0ab075::mw3nlvulnnnayjocgaj0nl53m: "/app": not found
+```
+**Was für ein Chaos!** Das Verzeichnis existiert nicht! Wer hat das Repository so zusammengeschustert?
+
+## Aktueller Status des API-Verzeichnisses
+```
+insgesamt 24
+drwxr-xr-x  2 valentino valentino 4096 28. Apr 14:59 .
+drwxr-xr-x 20 valentino valentino 4096 28. Apr 15:01 ..
+-rw-r--r--  1 valentino valentino  638 28. Apr 14:59 Dockerfile.api
+-rw-r--r--  1 valentino valentino  650 28. Apr 14:59 Dockerfile.simple
+-rw-r--r--  1 valentino valentino  327 28. Apr 14:59 requirements.api.txt
+-rw-r--r--  1 valentino valentino  116 28. Apr 14:59 requirements.simple.txt
+```
+**Das ist ja lächerlich!** Nur vier Dateien im API-Verzeichnis? Wo ist der Rest? Das ist doch nicht ernst gemeint!
+
+## Zusammenfassung der Katastrophe
+1. **Docker-Images**: Nicht erreichbar - Wer hat die Berechtigungen so verbockt?
+2. **Dateien**: Fehlen komplett - Was für ein Pfusch!
+3. **Verzeichnisse**: Nicht vorhanden - Das ist doch nicht zu fassen!
+
+## Empfehlungen (wenn man das so nennen kann)
+1. **Docker-Images**: Jemand muss die verdammten Berechtigungen in Ordnung bringen!
+2. **Dateien**: Das Repository muss komplett überarbeitet werden - das ist doch kein Zustand!
+3. **Verzeichnisse**: Wer hat das so zusammengestellt? Das muss neu gemacht werden!
+
+## Nächste Schritte (wenn man überhaupt noch von Schritten reden kann)
+1. Repository komplett neu aufsetzen
+2. Alle fehlenden Dateien nachliefern
+3. Docker-Images neu bauen und bereitstellen
+4. Hoffen, dass es beim nächsten Mal klappt
+
+**Fazit**: Das ist eine einzige Katastrophe! Wer hat das so veröffentlicht? Das ist doch nicht zu gebrauchen!

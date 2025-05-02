@@ -20,7 +20,7 @@ import qrcode
 from PIL import Image, ImageDraw, ImageFont
 
 # Konfiguration
-PORT = int(os.getenv("PORT", 5002))
+PORT = int(os.getenv("PORT", 5000))
 HOST = os.getenv("HOST", "0.0.0.0")
 
 # Status-Variablen

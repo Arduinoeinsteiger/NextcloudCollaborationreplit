@@ -27,8 +27,8 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace/swissairdry/api && python minimal_http_server.py"
-waitForPort = 5002
+args = "cd /home/runner/workspace/swissairdry/api && PYTHONPATH=/home/runner/workspace python minimal_http_server.py"
+waitForPort = 5000
 
 [deployment]
 run = ["sh", "-c", "cd swissairdry/api/app && python run2.py"]

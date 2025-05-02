@@ -44,6 +44,8 @@ swissairdry/
 Der API-Server stellt die Hauptschnittstelle für Geräte und Benutzeranwendungen bereit.
 
 - **Minimal HTTP Server**: Ein einfacher Server ohne externe Abhängigkeiten (`api/minimal_http_server.py`)
+  - Geräte-API: Verwaltung und Abfrage von Geräten
+  - QR-Code-Generator: Erzeugung von Konfigurationscodes für einfache Gerätekonfiguration
 - **FastAPI-Anwendung**: Hauptanwendung mit vollständigen Funktionen (derzeit deaktiviert)
 
 ### MQTT-Broker
@@ -66,20 +68,32 @@ Die ESP-Firmware unterstützt verschiedene Gerätetypen:
 
 Für Entwickler:
 
-1. Starten Sie den Minimal HTTP Server:
+1. Installieren Sie die erforderlichen Abhängigkeiten:
+   ```
+   pip install qrcode pillow paho-mqtt
+   ```
+
+2. Starten Sie den Minimal HTTP Server:
    ```
    cd swissairdry/api
    python minimal_http_server.py
    ```
 
-2. Starten Sie den MQTT Broker:
+3. Starten Sie den MQTT Broker:
    ```
    mkdir -p /tmp/mosquitto/data /tmp/mosquitto/log
    chmod -R 777 /tmp/mosquitto
    mosquitto -c swissairdry/mqtt/mosquitto.conf
    ```
 
+4. Zugriff auf den QR-Code-Generator:
+   ```
+   http://localhost:5002/qrcode
+   ```
+
 Für Produktionsumgebungen, verwenden Sie die Docker-Konfiguration in `docker/`.
+
+Weitere Informationen finden Sie in der [Dokumentation des QR-Code-Generators](docs/qrcode_generator.md).
 
 ## Kontakt
 

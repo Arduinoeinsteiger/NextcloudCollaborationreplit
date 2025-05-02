@@ -2,7 +2,6 @@ FROM php:8.1-apache
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
-    libmosquitto-dev \
     libpq-dev \
     git \
     unzip \
@@ -18,9 +17,9 @@ RUN apt-get update && apt-get install -y \
         xml \
         soap \
         gd \
-    && docker-php-ext-install sockets \
-    && pecl install Mosquitto-0.4.0 \
-    && docker-php-ext-enable mosquitto
+    && docker-php-ext-install sockets
+# PHP-MQTT Extension entfernt, da nicht kompatibel mit neueren PHP-Versionen
+# und nicht zwingend erforderlich (Python-MQTT wird verwendet)
 
 # Configure Apache
 RUN a2enmod rewrite

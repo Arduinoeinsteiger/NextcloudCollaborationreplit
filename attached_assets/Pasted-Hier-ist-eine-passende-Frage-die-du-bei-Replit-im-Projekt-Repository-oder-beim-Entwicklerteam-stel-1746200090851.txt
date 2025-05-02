@@ -1,0 +1,48 @@
+Hier ist eine passende Frage, die du bei Replit, im Projekt-Repository oder beim Entwicklerteam stellen kannst:
+
+---
+
+**Frage (deutsch):**
+
+Hallo zusammen,
+
+beim Builden der Nextcloud-Umgebung (SwissAirDry/ExApp-Projekt) mit Docker bekomme ich folgenden Fehler:
+
+> `pecl install Mosquitto-0.4.0` schlägt fehl, weil die Mosquitto-Extension nicht mit aktuellen PHP-Versionen kompatibel ist (Fehler: „expected ')' before 'TSRMLS_CC'“ usw.).
+
+Ich habe alle Dockerfiles im Projekt durchsucht – dort gibt es **keine Zeile mit `pecl install Mosquitto` oder `docker-php-ext-enable mosquitto`**.  
+Trotzdem taucht der Fehler beim Build auf.  
+Kann es sein, dass ein externes Image, ein Build-Skript oder eine dynamisch generierte Datei diese Zeile einfügt?  
+Wie kann ich die Mosquitto-Extension für PHP im Build komplett deaktivieren oder entfernen, sodass der Build mit aktuellen PHP-Versionen funktioniert?
+
+**Zusatzinfos:**
+- Python-MQTT funktioniert, ich brauche die PHP-Extension nicht zwingend.
+- Alle lokalen Dockerfiles sind bereits geprüft und enthalten keine Mosquitto-Installation.
+
+Danke für jeden Hinweis!
+
+---
+
+**Englische Version (falls benötigt):**
+
+Hello everyone,
+
+when building the Nextcloud environment (SwissAirDry/ExApp project) with Docker, I get the following error:
+
+> `pecl install Mosquitto-0.4.0` fails because the Mosquitto extension is not compatible with current PHP versions (error: “expected ')' before 'TSRMLS_CC'”, etc.).
+
+I have searched all Dockerfiles in the project – there is **no line with `pecl install Mosquitto` or `docker-php-ext-enable mosquitto`**.  
+Still, the error appears during the build.  
+Is it possible that an external image, a build script, or a dynamically generated file is adding this line?  
+How can I completely disable or remove the Mosquitto extension for PHP in the build so that it works with current PHP versions?
+
+**Additional info:**
+- Python MQTT works, I do not necessarily need the PHP extension.
+- All local Dockerfiles have already been checked and do not contain any Mosquitto installation.
+
+Thanks for any help!
+
+---
+
+Du kannst diese Frage direkt so weitergeben.  
+Wenn du eine Antwort bekommst, unterstütze ich dich gerne bei der Umsetzung!

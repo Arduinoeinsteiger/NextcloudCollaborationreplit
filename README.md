@@ -14,99 +14,70 @@ Ein umfassendes System zur Verwaltung von Trocknungsgeräten für Bausanierungsu
 - Nextcloud-Integration als ExApp (Externe Anwendung)
 - Responsive Web- und Mobile-Oberfläche
 
-## Systemarchitektur
+## Projektstruktur
 
-Das SwissAirDry-System besteht aus folgenden Komponenten:
+Das SwissAirDry-Repository ist wie folgt organisiert:
 
-1. **API-Server**: FastAPI-basierter Backend-Server
-2. **Datenbank**: PostgreSQL für persistente Datenspeicherung
-3. **MQTT-Broker**: Für IoT-Kommunikation mit ESP-Geräten
-4. **Nextcloud-Integration**: ExApp für Nextcloud
-5. **Nginx**: Reverse Proxy für HTTPS und Routing
-6. **ESP-Firmware**: Angepasste Firmware für ESP32C6/ESP8266-Geräte
+```
+swissairdry/
+├── api/                 # API-Server und Endpunkte
+│   ├── app/             # Hauptanwendung
+│   ├── minimal_http_server.py  # Minimal-Server ohne externe Abhängigkeiten
+├── arduino/             # Arduino-Sketches für Wemos D1 Mini
+├── ci_tools/            # Tools für CI/CD und Build-Fixes
+├── config/              # Konfigurationsdateien
+├── docker/              # Docker-Konfiguration und Setup-Skripte
+├── docs/                # Projektdokumentation
+├── esp/                 # ESP32C6/ESP8266-Firmware
+├── ExApp/               # Nextcloud ExApp-Integration
+├── mobile/              # Mobile App (Android)
+├── mqtt/                # MQTT-Broker-Konfiguration
+├── nextcloud/           # Nextcloud-Integration
+├── scripts/             # Installations- und Utility-Skripte
+├── tools/               # Entwicklerwerkzeuge
+```
 
-## Installation
+## Komponenten
 
-### Voraussetzungen
+### API-Server
 
-- Docker und Docker Compose
-- SSL-Zertifikate (optional, für Produktionsumgebung empfohlen)
-- Domain mit DNS-Konfiguration (für Produktionsumgebung)
+Der API-Server stellt die Hauptschnittstelle für Geräte und Benutzeranwendungen bereit.
 
-### Schnellinstallation
+- **Minimal HTTP Server**: Ein einfacher Server ohne externe Abhängigkeiten (`api/minimal_http_server.py`)
+- **FastAPI-Anwendung**: Hauptanwendung mit vollständigen Funktionen (derzeit deaktiviert)
 
-1. Repository klonen:
+### MQTT-Broker
+
+Der MQTT-Broker ermöglicht die Kommunikation mit IoT-Geräten:
+
+- Läuft auf Port 1883 (MQTT) und 9001 (MQTT über WebSocket)
+- Konfiguration in `mqtt/mosquitto.conf`
+
+### ESP-Firmware
+
+Die ESP-Firmware unterstützt verschiedene Gerätetypen:
+
+- ESP32C6 (neuere Geräte): `esp/SwissAirDry_ESP32C6_MQTT.ino`
+- ESP8266/Wemos D1 Mini (ältere Geräte): `arduino/SwissAirDry_Wemos_Display_*.ino`
+
+## Entwicklung und Installation
+
+Für Entwickler:
+
+1. Starten Sie den Minimal HTTP Server:
    ```
-   git clone https://github.com/swissairdry/swissairdry.git
-   cd swissairdry
+   cd swissairdry/api
+   python minimal_http_server.py
    ```
 
-2. Installation ausführen:
+2. Starten Sie den MQTT Broker:
    ```
-   chmod +x install.sh
-   ./install.sh
-   ```
-
-3. Konfigurieren Sie die `.env`-Datei mit Ihren Einstellungen
-
-4. System starten:
-   ```
-   docker-compose up -d
+   mkdir -p /tmp/mosquitto/data /tmp/mosquitto/log
+   chmod -R 777 /tmp/mosquitto
+   mosquitto -c swissairdry/mqtt/mosquitto.conf
    ```
 
-### Manuelle Installation
-
-1. Verzeichnisstruktur erstellen:
-   ```
-   chmod +x mkdir.sh
-   ./mkdir.sh
-   ```
-
-2. SSL-Zertifikate in `ssl/certs/` und `ssl/private/` ablegen
-
-3. `.env`-Datei aus `.env.example` erstellen und anpassen
-
-4. System starten:
-   ```
-   docker-compose up -d
-   ```
-
-## ESP-Firmware
-
-Die aktuelle ESP-Firmware unterstützt folgende Geräte:
-
-- ESP32C6 (empfohlen für neue Installationen)
-- ESP8266 (Wemos D1 Mini, für bestehende Installationen)
-
-### ESP32C6-Firmware installieren
-
-1. Arduino IDE öffnen
-2. ESP32C6-Board-Support installieren
-3. Benötigte Bibliotheken installieren
-4. `SwissAirDry_ESP32C6_MQTT.ino` öffnen und hochladen
-
-## Wartung und Update
-
-- System aktualisieren:
-  ```
-  docker-compose pull
-  docker-compose up -d
-  ```
-
-- Logs anzeigen:
-  ```
-  docker-compose logs -f
-  ```
-
-- System neustarten:
-  ```
-  docker-compose restart
-  ```
-
-- System stoppen:
-  ```
-  docker-compose down
-  ```
+Für Produktionsumgebungen, verwenden Sie die Docker-Konfiguration in `docker/`.
 
 ## Kontakt
 

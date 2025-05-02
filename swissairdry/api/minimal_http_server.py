@@ -12,7 +12,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # Konfiguration
-PORT = int(os.getenv("PORT", 5001))
+PORT = int(os.getenv("PORT", 5002))
 HOST = os.getenv("HOST", "0.0.0.0")
 
 # Status-Variablen

@@ -1,122 +1,170 @@
-# SwissAirDry Installationsanleitung
+# SwissAirDry Installations-Anleitung
 
-Diese Anleitung beschreibt, wie Sie das SwissAirDry-System auf Ihrem Server installieren.
+> **HINWEIS: Diese Anleitung ist veraltet. Bitte verwenden Sie die neue [GENERALANLEITUNG.md](./GENERALANLEITUNG.md) für aktuelle Installations- und Konfigurationsanweisungen.**
+
+Diese Anleitung beschreibt die Installation des SwissAirDry-Systems mit allen Komponenten:
+
+- Nextcloud
+- SwissAirDry API
+- MQTT-Broker
+- PostgreSQL-Datenbank
+- Nginx als Reverse Proxy
 
 ## Voraussetzungen
 
-- Docker und Docker Compose müssen auf dem Server installiert sein
-- Ports 5000, 1883, 8080 und 5432 (optional) müssen freigegeben sein
-- SSH-Zugang zum Server
+- Linux-Server (Ubuntu 20.04 oder höher empfohlen)
+- Root-Zugriff oder sudo-Berechtigung
+- Mindestens 4GB RAM, 2 CPU-Kerne
+- Mindestens 20GB freier Speicherplatz
+- Internetverbindung für den Download der Docker-Images
 
-## Installation
+## 1. Vorbereitungen
 
-### 1. Dateien auf den Server übertragen
-
-Laden Sie alle Projektdateien auf Ihren Server hoch:
-
-```bash
-# Beispiel mit scp (ersetzen Sie user@server mit Ihren Daten)
-scp -r swissairdry_komplettpaket.zip user@server:/pfad/zum/ziel
-```
-
-Entpacken Sie das Archiv:
+Stellen Sie sicher, dass Ihr Server auf dem neuesten Stand ist:
 
 ```bash
-unzip swissairdry_komplettpaket.zip
-cd swissairdry
+sudo apt update
+sudo apt upgrade -y
 ```
 
-### 2. Umgebungsvariablen konfigurieren
+## 2. Installation ausführen
 
-Kopieren Sie die Beispielkonfiguration und passen Sie sie an:
+### Automatische Installation (empfohlen)
+
+1. Laden Sie das Installationsskript herunter:
 
 ```bash
-cp .env.example .env
+wget https://github.com/swissairdry/swissairdry/raw/main/install.sh
 ```
 
-Bearbeiten Sie die .env-Datei mit einem Texteditor:
+2. Machen Sie das Skript ausführbar:
 
 ```bash
-nano .env
+chmod +x install.sh
 ```
 
-Passen Sie mindestens die folgenden Werte an:
-- APP_SECRET_KEY (ein zufälliger, sicherer Schlüssel)
-- POSTGRES_PASSWORD (ein sicheres Passwort für die Datenbank)
-- JWT_SECRET_KEY (ein zufälliger, sicherer Schlüssel)
-- PRIMARY_API_HOST=api.vgnc.org
-- BACKUP_API_HOST=swissairdry.replit.app
-- MQTT_PASSWORD (ein sicheres Passwort für den MQTT-Broker)
-
-### 3. MQTT-Passwort einrichten
-
-Erstellen Sie eine Passwortdatei für den MQTT-Broker:
+3. Führen Sie das Skript als root aus:
 
 ```bash
-mkdir -p data/mosquitto/{data,log}
-docker run --rm -it eclipse-mosquitto:2 mosquitto_passwd -c /mosquitto/config/mosquitto.passwd swissairdry
+sudo ./install.sh
 ```
 
-Geben Sie das Passwort ein (dasselbe wie MQTT_PASSWORD in der .env-Datei).
+4. Folgen Sie den Anweisungen auf dem Bildschirm. Das Skript:
+   - Installiert alle erforderlichen Abhängigkeiten
+   - Richtet SSL-Zertifikate ein
+   - Konfiguriert Nextcloud, SwissAirDry API, MQTT und die Datenbank
+   - Erstellt sichere Passwörter
+   - Startet alle Dienste
 
-Kopieren Sie die generierte Passwortdatei:
+### Manuelle Installation
+
+Wenn Sie eine manuelle Installation bevorzugen, folgen Sie diesen Schritten:
+
+1. Installieren Sie Docker und Docker Compose:
 
 ```bash
-mkdir -p swissairdry-docker/mosquitto/config
-docker cp <container_id>:/mosquitto/config/mosquitto.passwd swissairdry-docker/mosquitto/config/
+sudo apt update
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt update
+sudo apt install -y docker-ce docker-compose
 ```
 
-### 4. Docker-Compose starten
-
-Starten Sie die Container:
+2. Erstellen Sie ein Verzeichnis für SwissAirDry:
 
 ```bash
-docker-compose up -d
+sudo mkdir -p /opt/swissairdry
+cd /opt/swissairdry
 ```
 
-Die Container werden gebaut und gestartet. Dies kann einige Minuten dauern.
-
-### 5. Zugriff auf die Anwendung
-
-- API-Server: http://ihre-domain:5000/
-- API-Dokumentation: http://ihre-domain:5000/docs
-- MQTT-Broker: ihre-domain:1883
-- Nextcloud (falls konfiguriert): http://ihre-domain:8080/
-
-## Failover-System
-
-Das Failover-System ist so konfiguriert, dass es automatisch zwischen dem primären Server (api.vgnc.org) und dem Backup-Server (swissairdry.replit.app) wechselt. Der aktive Server wird im Admin-Bereich angezeigt.
-
-Sie können den Status der Server über http://ihre-domain:5000/api-status/ überprüfen. Eine Authentifizierung ist für diesen Endpunkt erforderlich.
-
-## Tipps zur Fehlerbehebung
-
-### Logs einsehen
-
-Die Logs der Container können mit dem folgenden Befehl eingesehen werden:
+3. Laden Sie die Konfigurationsdateien herunter:
 
 ```bash
-docker-compose logs -f api
+sudo wget https://github.com/swissairdry/swissairdry/raw/main/docker-compose.yml
+sudo wget https://github.com/swissairdry/swissairdry/raw/main/.env.example -O .env
 ```
 
-Für andere Container den Namen entsprechend ändern (z.B. db, mqtt, nextcloud).
-
-### API-Server neu starten
-
-Falls der API-Server Probleme verursacht, kann er wie folgt neu gestartet werden:
+4. Bearbeiten Sie die Umgebungsvariablen:
 
 ```bash
-docker-compose restart api
+sudo nano .env
 ```
 
-### Datenbank-Verbindung überprüfen
-
-Falls Probleme mit der Datenbank auftreten, können Sie die Verbindung wie folgt überprüfen:
+5. Erstellen Sie die erforderlichen Verzeichnisse:
 
 ```bash
-docker-compose exec db psql -U swissairdry -d swissairdry -c "SELECT NOW();"
+sudo mkdir -p mqtt/config mqtt/data mqtt/log
+sudo mkdir -p nginx/conf.d nginx/ssl
+sudo mkdir -p postgres/data
+sudo mkdir -p api
 ```
 
-## Support
+6. Erstellen Sie die MQTT-Konfiguration:
 
-Bei Fragen oder Problemen wenden Sie sich bitte an support@swissairdry.com.
+```bash
+sudo nano mqtt/config/mosquitto.conf
+```
+
+7. Konfigurieren Sie SSL-Zertifikate:
+
+```bash
+sudo mkdir -p nginx/ssl
+# Kopieren Sie Ihre SSL-Zertifikate nach nginx/ssl/fullchain.pem und nginx/ssl/privkey.pem
+```
+
+8. Starten Sie die Dienste:
+
+```bash
+sudo docker-compose up -d
+```
+
+## 3. Nach der Installation
+
+1. Öffnen Sie Ihre Domain im Browser, um auf Nextcloud zuzugreifen:
+   - https://ihre-domain.de
+
+2. Legen Sie ein Administrator-Konto an (falls noch nicht durch das Skript erledigt).
+
+3. Installieren Sie die erforderlichen Nextcloud-Apps:
+   - External App (für die Integration der SwissAirDry-Anwendung)
+   - External Storage Support (für die Integration von Speichersystemen)
+   - Kalender, Aufgaben, etc. nach Bedarf
+
+4. Zugriff auf die SwissAirDry API:
+   - https://api.ihre-domain.de
+
+## 4. Fehlerbehebung
+
+Falls Probleme auftreten, prüfen Sie die Log-Dateien der Docker-Container:
+
+```bash
+cd /opt/swissairdry
+sudo docker-compose logs -f
+```
+
+Weitere Informationen zur Fehlerbehebung finden Sie in der FEHLERBEHEBUNG.md Datei.
+
+## 5. Sicherheitshinweise
+
+- Ändern Sie die generierten Passwörter regelmäßig
+- Halten Sie alle Container mit `docker-compose pull && docker-compose up -d` aktuell
+- Sichern Sie regelmäßig die Daten mit `docker-compose exec -T db mysqldump -u root -p<PASSWORT> nextcloud > nextcloud_backup.sql`
+
+## 6. Updates
+
+Um das System zu aktualisieren:
+
+```bash
+cd /opt/swissairdry
+git pull  # Bei Installation über Git
+sudo docker-compose pull
+sudo docker-compose up -d
+```
+
+## 7. Support
+
+Bei Fragen und Problemen wenden Sie sich an:
+- E-Mail: support@swissairdry.com
+- Webseite: https://swissairdry.com/support
+- GitHub Issues: https://github.com/swissairdry/swissairdry/issues

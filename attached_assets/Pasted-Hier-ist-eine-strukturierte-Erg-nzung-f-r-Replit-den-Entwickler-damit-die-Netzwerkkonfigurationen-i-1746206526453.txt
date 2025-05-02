@@ -1,0 +1,64 @@
+Hier ist eine strukturierte Ergänzung für Replit/den Entwickler, damit die Netzwerkkonfigurationen in die Dokumentation und ggf. in ein Installationsskript aufgenommen werden können:
+
+---
+
+**Netzwerkkonfigurationen für die automatisierte Installation**
+
+Bitte dokumentiere und berücksichtige folgende Netzwerkkonfigurationen im Projekt und in der INSTALLATION.md:
+
+---
+
+### 1. **Portweiterleitungen (Router/Firewall)**
+- **Port 80 (HTTP)** → Server-IP (z.B. 192.168.1.160)
+- **Port 443 (HTTPS)** → Server-IP (z.B. 192.168.1.160)
+- **Port 8080** (Nextcloud Weboberfläche, falls genutzt) → Server-IP
+- **Port 3000** (ExApp Frontend, falls genutzt) → Server-IP
+- **Port 5000** (SwissAirDry API) → Server-IP
+- **Port 5001** (Simple API) → Server-IP
+- **Port 8701** (ExApp Daemon) → Server-IP
+- **Port 1883** (MQTT Broker) → Server-IP
+- **Port 9001** (MQTT WebSocket) → Server-IP
+- **Port 5432** (PostgreSQL) → Server-IP
+
+---
+
+### 2. **Docker Compose Netzwerke**
+- **frontend**: Für Webzugriffe (Nextcloud, ExApp-Frontend, Reverse Proxy)
+- **backend**: Für interne Kommunikation (API, Datenbank, Daemon)
+- **mqtt-net**: Für MQTT-Kommunikation (Broker, API, Daemon)
+
+---
+
+### 3. **Firewall-Regeln (Beispiel für UFW)**
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8080/tcp
+sudo ufw allow 3000/tcp
+sudo ufw allow 5000/tcp
+sudo ufw allow 5001/tcp
+sudo ufw allow 8701/tcp
+sudo ufw allow 1883/tcp
+sudo ufw allow 9001/tcp
+sudo ufw allow 5432/tcp
+```
+
+---
+
+### 4. **Cloudflare (falls genutzt)**
+- DNS-Einträge für alle relevanten Subdomains (z.B. cloud.domain.tld, api.domain.tld)
+- Proxy-Status für Zertifikats- und API-Zugriffe ggf. deaktivieren (orange/gray cloud)
+- SSL/TLS auf "Full" oder "Full (strict)" stellen, je nach Zertifikatslage
+
+---
+
+### 5. **Empfehlung für das Installationsskript**
+- Prüfe, ob alle Ports offen sind und die Weiterleitungen stimmen
+- Setze die Docker-Netzwerke wie in der `docker-compose.yml` beschrieben
+- Optional: Automatisiere die UFW-Regeln und prüfe Cloudflare-Status via API
+
+---
+
+**Bitte diese Netzwerkkonfigurationen in die INSTALLATION.md aufnehmen und für ein zukünftiges Installationsskript berücksichtigen!**
+
+Damit ist sichergestellt, dass das Projekt wirklich "out of the box" und automatisiert aufgesetzt werden kann.

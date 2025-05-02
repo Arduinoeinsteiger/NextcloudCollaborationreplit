@@ -52,6 +52,8 @@ Der MQTT-Broker ermöglicht die Kommunikation mit IoT-Geräten:
 
 - Läuft auf Port 1883 (MQTT) und 9001 (MQTT über WebSocket)
 - Konfiguration in `mqtt/mosquitto.conf`
+- Die MQTT-Kommunikation erfolgt ausschließlich über Python (paho-mqtt)
+- Die PHP-MQTT-Extension wird nicht mehr verwendet
 
 ### ESP-Firmware
 
